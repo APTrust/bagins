@@ -8,7 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"hash"
-	"io/ioutil"
+	"io"
 	"os"
 )
 
@@ -23,11 +23,10 @@ func FileChecksum(filepath string, algo string) string {
 		panic(err)
 	}
 
-	fileBytes, err := ioutil.ReadAll(file)
+	_, err = io.Copy(hsh, file)
 	if err != nil {
 		panic(err)
 	}
-	hsh.Write(fileBytes)
 	byteSum := hsh.Sum(nil)
 	return fmt.Sprintf("%x", byteSum) // Convert to base16 on formatting.
 }
