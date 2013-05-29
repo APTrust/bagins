@@ -12,7 +12,7 @@ import (
 	"os"
 )
 
-// Takes a filepath as a string and produces a checksum.
+// Performs a checksum on a file located at `filepath` using `algo`
 func FileChecksum(filepath string, algo string) string {
 	hsh, err := newHash(algo)
 	if err != nil {
@@ -22,6 +22,7 @@ func FileChecksum(filepath string, algo string) string {
 	if err != nil {
 		panic(err)
 	}
+	defer file.Close()
 
 	_, err = io.Copy(hsh, file)
 	if err != nil {
@@ -31,7 +32,8 @@ func FileChecksum(filepath string, algo string) string {
 	return fmt.Sprintf("%x", byteSum) // Convert to base16 on formatting.
 }
 
-func newHash(algo string) (hash.Hash, error) {
+// Returns a new hash.Hash as indicated by the algo string.
+func NewCryptoHash(algo string) (hash.Hash, error) {
 	switch algo {
 	case "md5":
 		return md5.New(), nil

@@ -7,14 +7,8 @@
 */
 package bagins
 
-import (
-	"hash"
-	"os"
-)
-
 type Manifest struct {
-	entries  map[string]string // Map of file checksum and filepath
-	filepath string            // Actual File for the manifest itself.
-	algo     string            // Hash to use for checksums
-	name     string            // name of the file to use, i.e. 'manifest' or 'tagmanifest'
+	Data     map[string]string // Map of file checksum and filepath
+	Filepath string            // Actual File for the manifest itself.
+	Algo     string            // Hash to use for checksums
 }
