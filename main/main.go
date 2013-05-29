@@ -7,8 +7,8 @@ import (
 )
 
 func main() {
-	hashes := []string{"md5", "sha1", "sha256"}
+	hashes := []string{"md5", "sha1", "sha256", "crc32"}
 	for key := range hashes {
-		fmt.Println(hashes[key], bagutil.Sha1Checksum("/Users/swt8w/Desktop/PresentationDryRun.mp4", hashes[key]))
+		fmt.Println(hashes[key], bagutil.FileChecksum("/Users/swt8w/Desktop/PresentationDryRun.mp4", hashes[key]))
 	}
 }

@@ -3,6 +3,8 @@ package bagutil
 import (
 	"crypto/md5"
 	"crypto/sha1"
+	"crypto/sha256"
+	"crypto/sha512"
 	"errors"
 	"fmt"
 	"hash"
@@ -11,8 +13,11 @@ import (
 )
 
 // Takes a filepath as a string and produces a checksum.
-func Sha1Checksum(filepath string, algo string) string {
-	hsh, _ := newHash(algo)
+func FileChecksum(filepath string, algo string) string {
+	hsh, err := newHash(algo)
+	if err != nil {
+		panic(err)
+	}
 	file, err := os.Open(filepath)
 	if err != nil {
 		panic(err)
@@ -28,11 +33,15 @@ func Sha1Checksum(filepath string, algo string) string {
 }
 
 func newHash(algo string) (hash.Hash, error) {
-	switch {
-	case algo == "md5":
+	switch algo {
+	case "md5":
 		return md5.New(), nil
-	case algo == "sha1":
+	case "sha1":
 		return sha1.New(), nil
+	case "sha256":
+		return sha256.New(), nil
+	case "sha512":
+		return sha512.New(), nil
 	}
-	return nil, errors.New("Unsupported Hash type.")
+	return nil, errors.New("Unsupported hash value.")
 }
