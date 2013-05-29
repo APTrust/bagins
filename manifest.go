@@ -13,8 +13,8 @@ import (
 )
 
 type Manifest struct {
-	entries map[string]*os.File // Maintain a map of Files managed in the manifest, referenced by checksum.
-	file    *os.File            // Actual File for the manifest itself.
-	hash    hash.Hash           // Hash to use for checksums
-	name    string              // name of the file to use, i.e. 'manifest' or 'tagmanifest'
+	entries  map[string]string // Map of file checksum and filepath
+	filepath string            // Actual File for the manifest itself.
+	algo     string            // Hash to use for checksums
+	name     string            // name of the file to use, i.e. 'manifest' or 'tagmanifest'
 }

@@ -2,20 +2,13 @@
 package main
 
 import (
-	//"bagins"
 	"bagins/bagutil"
 	"fmt"
-	"os"
 )
 
 func main() {
-	//bag := bagins.NewBag(nil, nil)
-	//fmt.Println(bag)
-
-	file, err := os.Open("/Users/swt8w/Desktop/PresentationDryRun.mp4")
-	if err != nil {
-		panic(err)
+	hashes := []string{"md5", "sha1", "sha256"}
+	for key := range hashes {
+		fmt.Println(hashes[key], bagutil.Sha1Checksum("/Users/swt8w/Desktop/PresentationDryRun.mp4", hashes[key]))
 	}
-	fmt.Println(bagutil.Sha1Checksum(file))
-
 }
