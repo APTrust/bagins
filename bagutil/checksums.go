@@ -14,7 +14,7 @@ import (
 
 // Performs a checksum on a file located at `filepath` using `algo`
 func FileChecksum(filepath string, algo string) string {
-	hsh, err := newHash(algo)
+	hsh, err := NewChecksumHash(algo)
 	if err != nil {
 		panic(err)
 	}
@@ -33,7 +33,7 @@ func FileChecksum(filepath string, algo string) string {
 }
 
 // Returns a new hash.Hash as indicated by the algo string.
-func NewCryptoHash(algo string) (hash.Hash, error) {
+func NewChecksumHash(algo string) (hash.Hash, error) {
 	switch algo {
 	case "md5":
 		return md5.New(), nil
