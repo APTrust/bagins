@@ -26,14 +26,14 @@ func (tf *TagFile) Create() {
 	// Create directory if needed.
 	basepath := path.Dir(tf.Filepath)
 	filename := path.Base(tf.Filepath)
-	if os.MkdirAll(basepath, 0777) != nil {
-		panic("Unable to create directory for tagfile!")
+	if err := os.MkdirAll(basepath, 0777); err != nil {
+		panic("Error creating tagfile directory: " + err.Error())
 	}
 
 	// Create the tagfile.
 	fileOut, err := os.Create(path.Join(basepath, filename))
 	if err != nil {
-		panic("Unable to create tag file!")
+		panic("Error creating tagfile: " + err.Error())
 	}
 	defer fileOut.Close()
 
@@ -41,7 +41,7 @@ func (tf *TagFile) Create() {
 	for key, data := range tf.Data {
 		_, err := fmt.Fprintln(fileOut, FormatField(key, data))
 		if err != nil {
-			panic("Unable to write data to tagfile.")
+			panic("Error writing line to tagfile: " + err.Error())
 		}
 	}
 }
@@ -57,7 +57,7 @@ func FormatField(key string, data string) string {
 	// Initiate it by writing the proper key.
 	writeLen, err := buff.WriteString(fmt.Sprintf("%s: ", key))
 	if err != nil {
-		panic("Unable to begin writing field!")
+		panic("Error intiating field: " + err.Error())
 	}
 	splitCounter := writeLen
 
@@ -67,12 +67,12 @@ func FormatField(key string, data string) string {
 		if splitCounter+len(words[word]) > 79 {
 			splitCounter, err = buff.WriteString(delimeter)
 			if err != nil {
-				panic("Unable to write field!")
+				panic("Error inserting newline in field: " + err.Error())
 			}
 		}
 		writeLen, err = buff.WriteString(strings.Join([]string{" ", words[word]}, ""))
 		if err != nil {
-			panic("Unable to write field!")
+			panic("Error writing data to field: " + err.Error())
 		}
 		splitCounter += writeLen
 
