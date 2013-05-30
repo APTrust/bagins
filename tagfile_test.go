@@ -1,7 +1,8 @@
 // tagfile_test
-package bagins
+package bagins_test
 
 import (
+	"bagins"
 	"os"
 	"path"
 	"strings"
@@ -18,7 +19,7 @@ func TestTagFileCreate(t *testing.T) {
 		"BagIt-Version":                `A metadata element MUST consist of a label, a colon, and a value, each separated by optional whitespace.  It is RECOMMENDED that lines not exceed 79 characters in length.  Long values may be continued onto the next line by inserting a newline (LF), a carriage return (CR), or carriage return plus newline (CRLF) and indenting the next line with linear white space (spaces or tabs).`,
 		"Tag-File-Character-Encodeing": "UTF-8",
 	}
-	tagFile := TagFile{Filepath: testPath, Data: data}
+	tagFile := bagins.TagFile{Filepath: testPath, Data: data}
 	tagFile.Create()
 	if _, err := os.Stat(testPath); err != nil {
 		t.Error("File and path", testPath, "not created!")
@@ -27,7 +28,7 @@ func TestTagFileCreate(t *testing.T) {
 }
 
 func TestFormatField(t *testing.T) {
-	resultString := formatField("tst", strings.Repeat("test ", 20))
+	resultString := bagins.FormatField("tst", strings.Repeat("test ", 20))
 	exp := 80
 	act := strings.Index(resultString, "\n")
 	if exp != act {

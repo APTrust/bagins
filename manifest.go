@@ -7,8 +7,28 @@
 */
 package bagins
 
+import (
+	"bagins/bagutil"
+	"errors"
+	"fmt"
+)
+
 type Manifest struct {
-	Data     map[string]string // Map of file checksum and filepath
+	Data     map[string]string // Map of filepath key and checksum value for that file
 	Filepath string            // Actual File for the manifest itself.
 	Algo     string            // Hash to use for checksums
+}
+
+func (m *Manifest) RunChecksums() []error {
+	invalidSums := make([]error, 0)
+	for key, sum := range m.Data {
+		fileChecksum := bagutil.FileChecksum(key, m.Algo)
+		if sum == "" {
+			m.Data[key] = fileChecksum
+		}
+		if sum != "" && sum != fileChecksum {
+			invalidSums = append(invalidSums, errors.New(fmt.Sprintln("File checkum is not valid for", key, "!")))
+		}
+	}
+	return invalidSums
 }
