@@ -2,7 +2,6 @@
 package bagutil
 
 import (
-	//"fmt"
 	"io/ioutil"
 	"os"
 	"testing"

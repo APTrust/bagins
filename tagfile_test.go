@@ -2,7 +2,6 @@
 package bagins
 
 import (
-	"fmt"
 	"os"
 	"path"
 	"strings"
@@ -25,7 +24,6 @@ func TestTagFileCreate(t *testing.T) {
 		t.Error("File and path", testPath, "not created!")
 	}
 	os.RemoveAll(path.Dir(testPath))
-	fmt.Println(os.TempDir())
 }
 
 func TestFormatField(t *testing.T) {
