@@ -3,7 +3,11 @@ package bagins
 
 // Basic type referencing main elements of a bag.
 type Bag struct {
-	Name string // Name of the bag
+	name     string   // Name of the bag, will also be the top level directory name.
+	path     string   // the bag is under.
+	manifest Manifest // Required manifest file
+	data     *os.File // Data Directory
+	bagit    TagFile  // bagit.txt Tag file.
 }
 
 // Creates a new bag in the provided location and name.
