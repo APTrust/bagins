@@ -1,6 +1,10 @@
 // Package for dealing with bag structures.
 package bagins
 
+import (
+	"os"
+)
+
 // Basic type referencing main elements of a bag.
 type Bag struct {
 	name     string   // Name of the bag, will also be the top level directory name.
