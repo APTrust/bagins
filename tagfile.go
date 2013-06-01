@@ -10,28 +10,39 @@ package bagins
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"path"
+	"regexp"
 	"strings"
 )
 
 type TagFile struct {
-	Filepath string            // Filepath for tag file.
-	Data     map[string]string // key value pairs of data for the tagfile.
+	name string            // Filepath for tag file.
+	Data map[string]string // key value pairs of data for the tagfile.
+}
+
+func NewTagFile(name string) (tf *TagFile, err error) {
+	_, err = os.Stat(path.Dir(name))
+	re, _ := regexp.Compile(`.*\.txt`)
+	if !re.MatchString(path.Base(name)) {
+		err = errors.New(fmt.Sprint("Tagfile is improperly names as ", path.Base(name)))
+	}
+	tf = new(TagFile)
+	tf.name = path.Clean(name)
+	return tf, err
 }
 
 // Writes key value pairs to a tag file.
 func (tf *TagFile) Create() {
 	// Create directory if needed.
-	basepath := path.Dir(tf.Filepath)
-	filename := path.Base(tf.Filepath)
-	if err := os.MkdirAll(basepath, 0777); err != nil {
+	if err := os.MkdirAll(path.Dir(tf.name), 0777); err != nil {
 		panic("Error creating tagfile directory: " + err.Error())
 	}
 
 	// Create the tagfile.
-	fileOut, err := os.Create(path.Join(basepath, filename))
+	fileOut, err := os.Create(tf.name)
 	if err != nil {
 		panic("Error creating tagfile: " + err.Error())
 	}
