@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"regexp"
+	"strings"
 )
 
 // Manifest represents information about a BagIt manifest file.  As of BagIt spec
@@ -21,10 +22,15 @@ type Manifest struct {
 	algo string            // Hash type to use for checksums and to concat to filename
 }
 
+// Returns a pointer to a new manifest or returns an error if improperly named.
 func NewManifest(name string) (m *Manifest, err error) {
-	m = &Manifest{Data: make(map[string]string)}
-	m.name = name
+	m = new(Manifest)
+	m.Data = make(map[string]string)
+	m.name = path.Clean(name)
 	m.algo, err = m.AlgoName()
+	if !strings.HasSuffix(path.Base(m.name), ".txt") {
+		err = fmt.Errorf("Manifest file %s does not end in .txt as required", path.Base(m.name))
+	}
 	return
 }
 

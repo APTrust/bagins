@@ -17,6 +17,10 @@ func TestNewManifest(t *testing.T) {
 	if err != nil {
 		t.Error("Manifest could not be created!", err)
 	}
+	name = path.Join(os.TempDir(), "_GOTEST_manifest-sha1")
+	if err != nil {
+		t.Error("NewManifest incorrectly accepting an improperly formatted filename.")
+	}
 }
 
 func TestAlgoName(t *testing.T) {

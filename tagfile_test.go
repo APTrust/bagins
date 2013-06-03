@@ -9,10 +9,17 @@ import (
 	"testing"
 )
 
-/*
-Test for Creation of the tagfile in a directory.
-TODO test for formatting once those methods are written.
-*/
+func TestNewTagFile(t *testing.T) {
+	_, err := bagins.NewTagFile("tagfile.txt")
+	if err != nil {
+		t.Error("Tagfile raised an error incorrectly!")
+	}
+	_, err = bagins.NewTagFile(".tagfile")
+	if err == nil {
+		t.Error("Bag tagfile name did not raise error as expected.")
+	}
+}
+
 func TestTagFileCreate(t *testing.T) {
 	testPath := path.Join(os.TempDir(), "golang_test_tagfiles/_GOTEST_bagit.txt")
 	tagFile, _ := bagins.NewTagFile(testPath)

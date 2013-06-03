@@ -27,10 +27,11 @@ func NewTagFile(name string) (tf *TagFile, err error) {
 	_, err = os.Stat(path.Dir(name))
 	re, _ := regexp.Compile(`.*\.txt`)
 	if !re.MatchString(path.Base(name)) {
-		err = errors.New(fmt.Sprint("Tagfile is improperly names as ", path.Base(name)))
+		err = errors.New(fmt.Sprint("Tagfiles must end in .txt and contain at least 1 letter.  Provided: ", path.Base(name)))
 	}
 	tf = new(TagFile)
 	tf.name = path.Clean(name)
+	tf.Data = make(map[string]string)
 	return tf, err
 }
 
