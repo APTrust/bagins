@@ -9,17 +9,24 @@ import (
 	"testing"
 )
 
-/*
-Test for Creation of the tagfile in a directory.
-TODO test for formatting once those methods are written.
-*/
+func TestNewTagFile(t *testing.T) {
+	_, err := bagins.NewTagFile("tagfile.txt")
+	if err != nil {
+		t.Error("Tagfile raised an error incorrectly!")
+	}
+	_, err = bagins.NewTagFile(".tagfile")
+	if err == nil {
+		t.Error("Bag tagfile name did not raise error as expected.")
+	}
+}
+
 func TestTagFileCreate(t *testing.T) {
-	testPath := path.Join(os.TempDir(), "golang_test_tagfiles/test_bagit.txt")
-	data := map[string]string{
+	testPath := path.Join(os.TempDir(), "golang_test_tagfiles/_GOTEST_bagit.txt")
+	tagFile, _ := bagins.NewTagFile(testPath)
+	tagFile.Data = map[string]string{
 		"BagIt-Version":                `A metadata element MUST consist of a label, a colon, and a value, each separated by optional whitespace.  It is RECOMMENDED that lines not exceed 79 characters in length.  Long values may be continued onto the next line by inserting a newline (LF), a carriage return (CR), or carriage return plus newline (CRLF) and indenting the next line with linear white space (spaces or tabs).`,
 		"Tag-File-Character-Encodeing": "UTF-8",
 	}
-	tagFile := bagins.TagFile{Filepath: testPath, Data: data}
 	tagFile.Create()
 	if _, err := os.Stat(testPath); err != nil {
 		t.Error("File and path", testPath, "not created!")
