@@ -1,9 +1,9 @@
 package bagins
 
 import (
-	"bagins/bagutil"
 	"errors"
 	"fmt"
+	"github.com/APTrust/bagins/bagutil"
 	"os"
 	"path"
 	"regexp"

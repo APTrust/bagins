@@ -1,7 +1,7 @@
 package bagins_test
 
 import (
-	"bagins"
+	"github.com/APTrust/bagins"
 	"os"
 	"path"
 	"testing"

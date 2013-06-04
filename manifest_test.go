@@ -2,7 +2,7 @@
 package bagins_test
 
 import (
-	"bagins"
+	"github.com/APTrust/bagins"
 	"io/ioutil"
 	"math/rand"
 	"os"
