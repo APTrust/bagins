@@ -3,7 +3,7 @@ package bagins_test
 import (
 	"github.com/APTrust/bagins"
 	//"io/ioutil"
-	//"crypto/md5"
+	"crypto/md5"
 	"io/ioutil"
 	"os"
 	"path"
@@ -37,25 +37,25 @@ func TestNewPayload(t *testing.T) {
 	os.Remove(pth)
 }
 
-// func TestPayloadAdd(t *testing.T) {
-// 	pDir, _ := ioutil.TempDir("", "_GOTEST")
+func TestPayloadAdd(t *testing.T) {
+	pDir, _ := ioutil.TempDir("", "_GOTEST_Payload")
+	defer os.RemoveAll(pDir)
 
-// 	p, err := bagins.NewPayload(pDir)
-// 	if err != nil {
-// 		t.Error(err)
-// 	}
+	p, err := bagins.NewPayload(pDir)
+	if err != nil {
+		t.Error(err)
+	}
 
-// 	testFile, _ := ioutil.TempFile("", "_GO_TESTFILE_")
-// 	testFile.WriteString("Test the checksum")
-// 	testFile.Close()
+	testFile, _ := ioutil.TempFile("", "_GO_TESTFILE_")
+	testFile.WriteString("Test the checksum")
+	testFile.Close()
 
-// 	chkSum, err := p.Add(testFile.Name(), path.Base(testFile.Name(), md5.New()))
-// 	if err != nil {
-// 		t.Error(err)
-// 	}
-// 	exp := "92d7a9f0f4a30ca782dcae5fe83ca7eb"
-// 	if exp != chkSum {
-// 		t.Error("Checksum", chkSum, "did not match", exp)
-// 	}
-// 	os.RemoveAll(pDir)
-// }
+	chkSum, err := p.Add(testFile.Name(), path.Base(testFile.Name()), md5.New())
+	if err != nil {
+		t.Error(err)
+	}
+	exp := "92d7a9f0f4a30ca782dcae5fe83ca7eb"
+	if exp != chkSum {
+		t.Error("Checksum", chkSum, "did not match", exp)
+	}
+}
