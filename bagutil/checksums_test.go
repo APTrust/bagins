@@ -9,11 +9,24 @@ import (
 
 var testAlgos []string = []string{"sha1", "sha256", "md5"}
 
-// func TestNewCheckAlgorithm(t *testing.T) {
-// 	for idx := range testAlgos {
-// 		chkAlgo := NewCheckAlgorithm(testAlgos[idx], )
-// 	}
-// }
+func TestNewCheckAlgorithm(t *testing.T) {
+	for idx := range testAlgos {
+		hsh, _ := LookupHash(testAlgos[idx])
+		chkAlgo := NewCheckAlgorithm(testAlgos[idx], hsh)
+		if chkAlgo == nil {
+			t.Error("Returned nil for check algorithm")
+		}
+	}
+}
+
+func TestNewCheckByName(t *testing.T) {
+	for idx := range testAlgos {
+		_, err := NewCheckByName(testAlgos[idx])
+		if err != nil {
+			t.Error(err)
+		}
+	}
+}
 
 func TestFileChecksum(t *testing.T) {
 	testMap := map[string]string{

@@ -20,7 +20,23 @@ type CheckAlgorithm struct {
 }
 
 func NewCheckAlgorithm(name string, hsh hash.Hash) *CheckAlgorithm {
-	return &CheckAlgorithm{Name: name, Hash: hsh}
+	h := new(CheckAlgorithm)
+	h.Name = name
+	h.Hash = hsh
+	return h
+}
+
+// Convienence method that looks up a checksum by name and assigns it
+// properly or returns an error.
+func NewCheckByName(name string) (*CheckAlgorithm, error) {
+	hsh, err := LookupHash(name)
+	if err != nil {
+		return nil, err
+	}
+	h := new(CheckAlgorithm)
+	h.Name = strings.ToLower(name)
+	h.Hash = hsh
+	return h, nil
 }
 
 // Performs a checksum with the hsh.Hash.Sum() method passed to the function
