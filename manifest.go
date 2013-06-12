@@ -37,7 +37,7 @@ func NewManifest(name string) (m *Manifest, err error) {
 // Returns the string of the algorithm name as indicated in the filename of
 // of the manifest.  It is determined by parsing the filename as per the
 // specification.
-func (m *Manifest) AlgoName() (algo string, err error) {
+func (m *Manifest) AlgoName() (string, error) {
 	filename := path.Base(m.name)
 	re, err := regexp.Compile(`(^.*\-)(.*)(\..*$)`)
 	matches := re.FindStringSubmatch(filename)
