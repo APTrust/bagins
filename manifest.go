@@ -19,45 +19,37 @@ import (
 type Manifest struct {
 	name string            // Path to the
 	Data map[string]string // Map of filepath key and checksum value for that file
-	algo string            // Hash type to use for checksums and to concat to filename
+	algo *bagutil.CheckAlgorithm
 }
 
 // Returns a pointer to a new manifest or returns an error if improperly named.
-func NewManifest(name string) (m *Manifest, err error) {
-	m = new(Manifest)
+func NewManifest(pth string, chkAlgo *bagutil.CheckAlgorithm) (*Manifest, error) {
+	if _, err := os.Stat(pth); err != nil {
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("Unable to create manifest.  Path does not exist: %s", pth)
+		} else {
+			return nil, fmt.Errorf("Unexpected error creating manifest: %s", err)
+		}
+	}
+	m := new(Manifest)
 	m.Data = make(map[string]string)
-	m.name = path.Clean(name)
-	m.algo, err = m.AlgoName()
-	if !strings.HasSuffix(path.Base(m.name), ".txt") {
-		err = fmt.Errorf("Manifest file %s does not end in .txt as required", path.Base(m.name))
-	}
-	return
-}
-
-// Returns the string of the algorithm name as indicated in the filename of
-// of the manifest.  It is determined by parsing the filename as per the
-// specification.
-func (m *Manifest) AlgoName() (string, error) {
-	filename := path.Base(m.name)
-	re, err := regexp.Compile(`(^.*\-)(.*)(\..*$)`)
-	matches := re.FindStringSubmatch(filename)
-	if len(matches) < 2 {
-		return "", errors.New("Unable to determine algorithm from filename!")
-	}
-	algo = matches[2]
-	return algo, nil
+	m.name = path.Join(pth, "manifest-"+strings.ToLower(chkAlgo.Name)+".txt")
+	m.algo = chkAlgo
+	return m, nil
 }
 
 func (m *Manifest) RunChecksums() []error {
 	invalidSums := make([]error, 0)
 	for key, sum := range m.Data {
-		algo, _ := m.AlgoName()
-		fileChecksum := bagutil.FileChecksum(key, algo)
+		fileChecksum, err := bagutil.FileChecksum(key, m.algo.Hash)
 		if sum == "" {
 			m.Data[key] = fileChecksum
 		}
 		if sum != "" && sum != fileChecksum {
 			invalidSums = append(invalidSums, errors.New(fmt.Sprintln("File checkum is not valid for", key, "!")))
+		}
+		if err != nil {
+			invalidSums = append(invalidSums, err)
 		}
 	}
 	return invalidSums
@@ -95,4 +87,20 @@ func (m *Manifest) Create() error {
 // Returns a sting of the filename for this manifest file based on Path, BaseName and Algo
 func (m *Manifest) Name() string {
 	return path.Clean(m.name)
+}
+
+// Tries to parse the algorithm name from a manifest filename.  Returns
+// an error if unable to do so.
+func GetAlgoName(name string) (string, error) {
+	filename := path.Base(name)
+	re, err := regexp.Compile(`(^.*\-)(.*)(\..*$)`)
+	if err != nil {
+		return "", err
+	}
+	matches := re.FindStringSubmatch(filename)
+	if len(matches) < 2 {
+		return "", errors.New("Unable to determine algorithm from filename!")
+	}
+	algo := matches[2]
+	return algo, nil
 }

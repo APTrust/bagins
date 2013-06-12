@@ -2,8 +2,9 @@ package bagins
 
 import (
 	"fmt"
-	"github.com/APTrust/bagins/bagutil"
+	//"github.com/APTrust/bagins/bagutil"
 	"hash"
+	"io"
 	"os"
 	"path"
 )
@@ -24,10 +25,10 @@ func NewPayload(location string) (*Payload, error) {
 
 // TODO Update when this signature settles
 func (p *Payload) Add(srcPath string, dstPath string, hsh hash.Hash) (string, error) {
-	chkSum, err := bagutil.FileChecksum(filepath, hsh)
-	if err != nil {
-		return "", err
-	}
+	//chkSum, err := bagutil.FileChecksum(filepath, hsh)
+	// if err != nil {
+	// 	return "", err
+	// }
 	src, err := os.Open(srcPath)
 	if err != nil {
 		return "", err
@@ -36,12 +37,12 @@ func (p *Payload) Add(srcPath string, dstPath string, hsh hash.Hash) (string, er
 
 	dst, err := os.Create(path.Join(p.path, dstPath))
 	if err != nil {
-		return 0, err
+		return "", err
 	}
 	defer dst.Close()
 
-	wrtn, err := io.Copy(dst, src)
-	return wrtn, err
+	_, err = io.Copy(dst, src)
+	return "", err
 }
 
 // Performs an add on every file under the directory supplied to the
