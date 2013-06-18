@@ -3,6 +3,7 @@ package bagins_test
 
 import (
 	"github.com/APTrust/bagins"
+	"github.com/APTrust/bagins/bagutil"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -12,24 +13,22 @@ import (
 )
 
 func TestNewManifest(t *testing.T) {
-	name := path.Join(os.TempDir(), "_GOTEST_manifest-sha1.txt")
-	_, err := bagins.NewManifest(name)
+	pth, _ := ioutil.TempDir("", "_GOTEST_MANIFEST")
+	defer os.RemoveAll(pth)
+
+	chk, _ := bagutil.NewCheckByName("sha1")
+	_, err := bagins.NewManifest(pth, chk)
 	if err != nil {
 		t.Error("Manifest could not be created!", err)
 	}
-	name = path.Join(os.TempDir(), "_GOTEST_manifest-sha1")
-	if err != nil {
-		t.Error("NewManifest incorrectly accepting an improperly formatted filename.")
-	}
 }
 
-func TestAlgoName(t *testing.T) {
+func TestGetAlgoName(t *testing.T) {
 	tst := make([]string, 0)
 	tst = append(tst, path.Join(os.TempDir(), "_GOTEST_manifest-sha1.txt"))
 	tst = append(tst, path.Join(os.TempDir(), "_GOTEST_manifest-md5-sha1.txt"))
 	for i := range tst {
-		m, _ := bagins.NewManifest(tst[i])
-		name, _ := m.AlgoName()
+		name, _ := bagins.GetAlgoName(tst[i])
 		if name != "sha1" {
 			t.Error("AlgoName returned", name, "but expected sha1")
 		}
@@ -41,7 +40,8 @@ func TestRunChecksums(t *testing.T) {
 	testFile.WriteString("Test the checksum")
 	testFile.Close()
 
-	mfst, _ := bagins.NewManifest(path.Join(os.TempDir(), "_GOTEST_manifest-sha1.txt"))
+	chk, _ := bagutil.NewCheckByName("sha1")
+	mfst, _ := bagins.NewManifest(os.TempDir(), chk)
 	mfst.Data[testFile.Name()] = ""
 	mfst.RunChecksums()
 
@@ -60,7 +60,8 @@ func TestRunChecksums(t *testing.T) {
 }
 
 func TestManifestCreate(t *testing.T) {
-	m, _ := bagins.NewManifest(path.Join(os.TempDir(), "_GOTEST_manifest-sha1.txt"))
+	chk, _ := bagutil.NewCheckByName("sha1")
+	m, _ := bagins.NewManifest(os.TempDir(), chk)
 
 	testFiles := make([]*os.File, 3)
 	for idx := range testFiles {

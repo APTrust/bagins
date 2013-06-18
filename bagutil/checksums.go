@@ -1,48 +1,76 @@
 package bagutil
 
 import (
-	"crypto/md5"
-	"crypto/sha1"
-	"crypto/sha256"
-	"crypto/sha512"
+	"crypto"
+	_ "crypto/md5"
+	_ "crypto/sha1"
+	_ "crypto/sha256"
+	_ "crypto/sha512"
 	"errors"
 	"fmt"
 	"hash"
 	"io"
 	"os"
+	"strings"
 )
 
-// Performs a checksum on a file located at `filepath` using `algo`
-func FileChecksum(filepath string, algo string) string {
-	hsh, err := NewChecksumHash(algo)
-	if err != nil {
-		panic(err)
-	}
-	file, err := os.Open(filepath)
-	if err != nil {
-		panic(err)
-	}
-	defer file.Close()
+type CheckAlgorithm struct {
+	Name string
+	Hash hash.Hash
+}
 
-	_, err = io.Copy(hsh, file)
+func NewCheckAlgorithm(name string, hsh hash.Hash) *CheckAlgorithm {
+	h := new(CheckAlgorithm)
+	h.Name = name
+	h.Hash = hsh
+	return h
+}
+
+// Convienence method that looks up a checksum by name and assigns it
+// properly or returns an error.
+func NewCheckByName(name string) (*CheckAlgorithm, error) {
+	hsh, err := LookupHash(name)
+	if err != nil {
+		return nil, err
+	}
+	h := new(CheckAlgorithm)
+	h.Name = strings.ToLower(name)
+	h.Hash = hsh
+	return h, nil
+}
+
+// Performs a checksum with the hsh.Hash.Sum() method passed to the function
+// and returns the hex value of the resultant string or an error
+func FileChecksum(filepath string, hsh hash.Hash) (string, error) {
+	src, err := os.Open(filepath)
+	if err != nil {
+		return "", err
+	}
+	defer src.Close()
+
+	_, err = io.Copy(hsh, src)
 	if err != nil {
 		panic(err)
 	}
 	byteSum := hsh.Sum(nil)
-	return fmt.Sprintf("%x", byteSum) // Convert to base16 on formatting.
+	return fmt.Sprintf("%x", byteSum), nil
 }
 
 // Returns a new hash.Hash as indicated by the algo string.
-func NewChecksumHash(algo string) (hash.Hash, error) {
-	switch algo {
+func LookupHash(algo string) (hash.Hash, error) {
+	switch strings.ToLower(algo) {
 	case "md5":
-		return md5.New(), nil
+		return crypto.MD5.New(), nil
 	case "sha1":
-		return sha1.New(), nil
+		return crypto.SHA1.New(), nil
 	case "sha256":
-		return sha256.New(), nil
+		return crypto.SHA256.New(), nil
 	case "sha512":
-		return sha512.New(), nil
+		return crypto.SHA512.New(), nil
+	case "sha224":
+		return crypto.SHA224.New(), nil
+	case "sha384":
+		return crypto.SHA384.New(), nil
 	}
 	return nil, errors.New("Unsupported hash value.")
 }

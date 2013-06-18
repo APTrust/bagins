@@ -21,10 +21,10 @@ type Bag struct {
 func NewBag(location string, name string) (*Bag, error) {
 	baseDir := path.Clean(location)
 	if _, err := os.Stat(baseDir); os.IsNotExist(err) {
-		return nil, fmt.Errorf("Bag destination location does not exist! Returned: %v", err)
+		return nil, fmt.Errorf("Destination path does not exist! Returned: %v", err)
 	}
 	if _, err := os.Stat(path.Join(baseDir, name)); os.IsExist(err) {
-		return nil, fmt.Errorf("Bag %s already exists!", path.Join(baseDir, name))
+		return nil, fmt.Errorf("Bag %s already exists! Returned: %s", path.Join(baseDir, name), err)
 	}
 	return new(Bag), nil
 }
