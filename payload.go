@@ -2,11 +2,11 @@ package bagins
 
 import (
 	"fmt"
-	"github.com/APTrust/bagins/bagutil"
 	"hash"
 	"io"
 	"os"
 	"path"
+	//"strings"
 )
 
 type Payload struct {
@@ -23,12 +23,13 @@ func NewPayload(location string) (*Payload, error) {
 	return p, nil
 }
 
+func (p *Payload) Name() string {
+	return p.dir
+}
+
 // TODO Update when this signature settles
 func (p *Payload) Add(srcPath string, dstPath string, hsh hash.Hash) (string, error) {
-	chkSum, err := bagutil.FileChecksum(srcPath, hsh)
-	if err != nil {
-		return "", err
-	}
+
 	src, err := os.Open(srcPath)
 	if err != nil {
 		return "", err
@@ -41,7 +42,13 @@ func (p *Payload) Add(srcPath string, dstPath string, hsh hash.Hash) (string, er
 	}
 	defer dst.Close()
 
-	_, err = io.Copy(dst, src)
+	wrtr := io.MultiWriter(dst, hsh)
+
+	_, err = io.Copy(wrtr, src)
+	if err != nil {
+		return "", err
+	}
+	chkSum := fmt.Sprintf("%x", hsh.Sum(nil))
 	return chkSum, err
 }
 
@@ -49,5 +56,23 @@ func (p *Payload) Add(srcPath string, dstPath string, hsh hash.Hash) (string, er
 // method.  Returns a map of the filename and its fixity falue and a
 // list of errors.
 func (p *Payload) AddAll(dir string, hsh hash.Hash) (fxs map[string]string, errs []error) {
+
+	// visit := func(pth string, info os.FileInfo, err error) error {
+	// 	if err != nil {
+	// 		errs = append([]error{err})
+	// 	}
+	// 	if !info.IsDir() {
+	// 		dstPath := strings.TrimPrefix(pth, dir)
+	// 		fx, err := p.Add(pth, dstPath, hsh)
+	// 		if err != nil {
+	// 			return err
+	// 		}
+	// 		fxs[dstPath] = fx
+	// 	}
+	// 	return nil
+	// }
+
+	// call filepath.WalkDir here.
+
 	return
 }

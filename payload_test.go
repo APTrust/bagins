@@ -1,9 +1,8 @@
 package bagins_test
 
 import (
-	"github.com/APTrust/bagins"
-	//"io/ioutil"
 	"crypto/md5"
+	"github.com/APTrust/bagins"
 	"io/ioutil"
 	"os"
 	"path"
@@ -37,6 +36,17 @@ func TestNewPayload(t *testing.T) {
 	os.Remove(pth)
 }
 
+func TestPayloadName(t *testing.T) {
+	pDir, _ := ioutil.TempDir("", "_GOTEST_Payload_")
+	defer os.Remove(pDir)
+
+	p, _ := bagins.NewPayload(pDir)
+
+	if pDir != p.Name() {
+		t.Errorf("Payload name %s did not equal expected %s", p.Name(), pDir)
+	}
+}
+
 func TestPayloadAdd(t *testing.T) {
 	pDir, _ := ioutil.TempDir("", "_GOTEST_Payload")
 	defer os.RemoveAll(pDir)
@@ -49,6 +59,7 @@ func TestPayloadAdd(t *testing.T) {
 	testFile, _ := ioutil.TempFile("", "_GO_TESTFILE_")
 	testFile.WriteString("Test the checksum")
 	testFile.Close()
+	defer os.Remove(testFile.Name())
 
 	chkSum, err := p.Add(testFile.Name(), path.Base(testFile.Name()), md5.New())
 	if err != nil {
