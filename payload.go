@@ -6,7 +6,8 @@ import (
 	"io"
 	"os"
 	"path"
-	//"strings"
+	"path/filepath"
+	"strings"
 )
 
 type Payload struct {
@@ -55,24 +56,27 @@ func (p *Payload) Add(srcPath string, dstPath string, hsh hash.Hash) (string, er
 // Performs an add on every file under the directory supplied to the
 // method.  Returns a map of the filename and its fixity falue and a
 // list of errors.
-func (p *Payload) AddAll(dir string, hsh hash.Hash) (fxs map[string]string, errs []error) {
+func (p *Payload) AddAll(src string, hsh hash.Hash) (fxs map[string]string, errs []error) {
+	fxs = make(map[string]string)
+	visit := func(pth string, info os.FileInfo, err error) error {
+		hsh.Reset()
+		if err != nil {
+			errs = append([]error{err})
+		}
+		if !info.IsDir() {
+			dstPath := strings.TrimPrefix(pth, src)
+			fx, err := p.Add(pth, dstPath, hsh)
+			if err != nil {
+				return err
+			}
+			fxs[dstPath] = fx
+		}
+		return nil
+	}
 
-	// visit := func(pth string, info os.FileInfo, err error) error {
-	// 	if err != nil {
-	// 		errs = append([]error{err})
-	// 	}
-	// 	if !info.IsDir() {
-	// 		dstPath := strings.TrimPrefix(pth, dir)
-	// 		fx, err := p.Add(pth, dstPath, hsh)
-	// 		if err != nil {
-	// 			return err
-	// 		}
-	// 		fxs[dstPath] = fx
-	// 	}
-	// 	return nil
-	// }
-
-	// call filepath.WalkDir here.
+	if err := filepath.Walk(src, visit); err != nil {
+		errs = append([]error{err})
+	}
 
 	return
 }

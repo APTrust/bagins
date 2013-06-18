@@ -3,6 +3,7 @@ package bagins_test
 import (
 	"crypto/md5"
 	"github.com/APTrust/bagins"
+	"github.com/APTrust/bagins/bagutil"
 	"io/ioutil"
 	"os"
 	"path"
@@ -69,4 +70,35 @@ func TestPayloadAdd(t *testing.T) {
 	if exp != chkSum {
 		t.Error("Checksum", chkSum, "did not match", exp)
 	}
+}
+
+func TestPayloadAddAll(t *testing.T) {
+	// Make src temp dir
+	srcDir, _ := ioutil.TempDir("", "_GOTEST_SRCDIR_")
+	defer os.RemoveAll(srcDir)
+	pDir, _ := ioutil.TempDir("", "_GOTEST_Payload_")
+	defer os.RemoveAll(pDir)
+
+	// Make src temp test files
+	for i := 0; i < 100; i++ {
+		tstFile, _ := ioutil.TempFile(srcDir, "_GOTEST_FILE_")
+		tstFile.WriteString("Test the checksum")
+		tstFile.Close()
+	}
+
+	p, _ := bagins.NewPayload(pDir)
+	fxs, errs := p.AddAll(srcDir, md5.New())
+	if errs != nil {
+		t.Errorf("Add all returned %d errors", len(errs))
+	}
+	for key := range fxs {
+		fileChk, err := bagutil.FileChecksum(path.Join(p.Name(), key), md5.New())
+		if err != nil {
+			t.Errorf(" %s", err)
+		}
+		if fxs[key] != fileChk {
+			t.Error("Expected", fxs[key], "but returned", fileChk)
+		}
+	}
+
 }
