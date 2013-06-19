@@ -37,7 +37,12 @@ func (p *Payload) Add(srcPath string, dstPath string, hsh hash.Hash) (string, er
 	}
 	defer src.Close()
 
-	dst, err := os.Create(path.Join(p.dir, dstPath))
+	dstFile := path.Join(p.dir, dstPath)
+	if err := os.MkdirAll(path.Dir(dstFile), 0777); err != nil {
+		return "", err
+	}
+
+	dst, err := os.Create(dstFile)
 	if err != nil {
 		return "", err
 	}
@@ -74,7 +79,12 @@ func (p *Payload) AddAll(src string, hsh hash.Hash) (fxs map[string]string, errs
 		return nil
 	}
 
-	if err := filepath.Walk(src, visit); err != nil {
+	c := make(chan error)
+
+	go func() {
+		c <- filepath.Walk(src, visit)
+	}()
+	if err := <-c; err != nil {
 		errs = append([]error{err})
 	}
 

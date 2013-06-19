@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"strings"
 	"testing"
 )
 
@@ -98,6 +99,43 @@ func TestPayloadAddAll(t *testing.T) {
 		}
 		if fxs[key] != fileChk {
 			t.Error("Expected", fxs[key], "but returned", fileChk)
+		}
+	}
+
+}
+
+func BenchmarkPayload(b *testing.B) {
+	srcDir, _ := ioutil.TempDir("", "_GOTEST_SRCDIR_")
+	defer os.RemoveAll(srcDir)
+	pDir, _ := ioutil.TempDir("", "_GOTEST_Payload_")
+	defer os.RemoveAll(pDir)
+
+	// Make src temp test files
+	for i := 0; i < 5000; i++ {
+		tstFile, _ := ioutil.TempFile(srcDir, "_GOTEST_FILE_")
+		tstFile.WriteString(strings.Repeat("Test the checksum. ", 100000))
+		tstFile.Close()
+	}
+
+	b.ResetTimer()
+
+	p, _ := bagins.NewPayload(pDir)
+
+	fxs, err := p.AddAll(srcDir, md5.New())
+	if err != nil {
+		b.Error(err)
+	}
+
+	b.StopTimer()
+
+	// Make sure the actual values check out.
+	for key := range fxs {
+		fileChk, err := bagutil.FileChecksum(path.Join(p.Name(), key), md5.New())
+		if err != nil {
+			b.Errorf(" %s", err)
+		}
+		if fxs[key] != fileChk {
+			b.Error("Expected", fxs[key], "but returned", fileChk)
 		}
 	}
 

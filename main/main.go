@@ -2,21 +2,26 @@
 package main
 
 import (
+	"crypto/sha256"
 	"fmt"
-	"path"
+	"github.com/APTrust/bagins"
 )
 
 func main() {
-	fstDir := "/relativve/pathto/place/"
-	sndDir := "/root/dir/toadd/"
-	fmt.Println(path.Join(fstDir, sndDir))
-}
+	srcDir := "/Users/swt8w/Documents/"
 
-//func main() {
-//	data := map[string]string{
-//		"BagIt-Version":                `A metadata element MUST consist of a label, a colon, and a value, each separated by optional whitespace.  It is RECOMMENDED that lines not exceed 79 characters in length.  Long values may be continued onto the next line by inserting a newline (LF), a carriage return (CR), or carriage return plus newline (CRLF) and indenting the next line with linear white space (spaces or tabs).`,
-//		"Tag-File-Character-Encodeing": "UTF-8",
-//	}
-//	tagFile := bagins.TagFile{Filepath: "tagfiles/bagit.txt", Data: data}
-//	tagFile.Create()
-//}
+	dstDir := "/Users/swt8w/payload_test"
+
+	p, _ := bagins.NewPayload(dstDir)
+	fxs, errs := p.AddAll(srcDir, sha256.New())
+	if errs != nil {
+		fmt.Println(errs)
+	}
+
+	for key := range fxs {
+		fmt.Println(key, fxs[key])
+	}
+
+	fmt.Println("Done procesing", len(fxs), "files.")
+
+}
