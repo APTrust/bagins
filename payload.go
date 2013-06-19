@@ -79,12 +79,7 @@ func (p *Payload) AddAll(src string, hsh hash.Hash) (fxs map[string]string, errs
 		return nil
 	}
 
-	c := make(chan error)
-
-	go func() {
-		c <- filepath.Walk(src, visit)
-	}()
-	if err := <-c; err != nil {
+	if err := filepath.Walk(src, visit); err != nil {
 		errs = append([]error{err})
 	}
 

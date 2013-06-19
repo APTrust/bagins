@@ -113,7 +113,7 @@ func BenchmarkPayload(b *testing.B) {
 	// Make src temp test files
 	for i := 0; i < 5000; i++ {
 		tstFile, _ := ioutil.TempFile(srcDir, "_GOTEST_FILE_")
-		tstFile.WriteString(strings.Repeat("Test the checksum. ", 100000))
+		tstFile.WriteString(strings.Repeat("Test the checksum. ", 50000))
 		tstFile.Close()
 	}
 
@@ -140,3 +140,9 @@ func BenchmarkPayload(b *testing.B) {
 	}
 
 }
+
+// Results running all on a single thread with Payload.Add happening inside
+// the Walkfunc.
+// go test -bench . -benchmem -benchtime 10m
+// BenchmarkPayload	5000000000	         7.13 ns/op	       0 B/op	       0 allocs/op
+// BenchmarkPayload	10000000000	         3.43 ns/op	       0 B/op	       0 allocs/op
