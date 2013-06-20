@@ -68,6 +68,9 @@ func LookupHash(algo string) (hash.Hash, error) {
 	return hsh(), nil
 }
 
+// Returns a new hash function based on a lookup of the algo string
+// passed to the function.  Returns an error if the algo string does not match
+// any of the available cryto hashes.
 func LookupHashFunc(algo string) (func() hash.Hash, error) {
 	switch strings.ToLower(algo) {
 	case "md5":

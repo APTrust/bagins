@@ -11,6 +11,8 @@ import (
 	"strings"
 )
 
+// Payloads describes a filepath location to serve as the data directory of
+// a Bag and methods around managing content inside of it.
 type Payload struct {
 	dir string // Path of the payload directory to manage.
 }
@@ -29,7 +31,9 @@ func (p *Payload) Name() string {
 	return p.dir
 }
 
-// TODO Update when this signature settles
+// Adds the file at srcPath to the payload directory as dstPath and returns
+// a checksum value as calulated by the provided hash.  Returns the checksum
+// string and any error encountered
 func (p *Payload) Add(srcPath string, dstPath string, hsh hash.Hash) (string, error) {
 
 	src, err := os.Open(srcPath)
