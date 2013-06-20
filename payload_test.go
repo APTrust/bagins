@@ -1,6 +1,7 @@
 package bagins_test
 
 import (
+	"crypto"
 	"crypto/md5"
 	"github.com/APTrust/bagins"
 	"github.com/APTrust/bagins/bagutil"
@@ -88,7 +89,7 @@ func TestPayloadAddAll(t *testing.T) {
 	}
 
 	p, _ := bagins.NewPayload(pDir)
-	fxs, errs := p.AddAll(srcDir, md5.New())
+	fxs, errs := p.AddAll(srcDir, md5.New)
 	if errs != nil {
 		t.Errorf("Add all returned %d errors", len(errs))
 	}
@@ -121,7 +122,7 @@ func BenchmarkPayload(b *testing.B) {
 
 	p, _ := bagins.NewPayload(pDir)
 
-	fxs, err := p.AddAll(srcDir, md5.New())
+	fxs, err := p.AddAll(srcDir, crypto.MD5.New)
 	if err != nil {
 		b.Error(err)
 	}
@@ -144,5 +145,9 @@ func BenchmarkPayload(b *testing.B) {
 // Results running all on a single thread with Payload.Add happening inside
 // the Walkfunc.
 // go test -bench . -benchmem -benchtime 10m
+// BEFORE refactor, running as a single function.
 // BenchmarkPayload	5000000000	         7.13 ns/op	       0 B/op	       0 allocs/op
 // BenchmarkPayload	10000000000	         3.43 ns/op	       0 B/op	       0 allocs/op
+
+// AFTER refactor to go routines
+// BenchmarkPayload	2000000000	         0.01 ns/op	       0 B/op	       0 allocs/op

@@ -14,6 +14,8 @@ import (
 	"strings"
 )
 
+type HashMaker func() hash.Hash
+
 type CheckAlgorithm struct {
 	Name string
 	Hash hash.Hash
@@ -57,20 +59,29 @@ func FileChecksum(filepath string, hsh hash.Hash) (string, error) {
 }
 
 // Returns a new hash.Hash as indicated by the algo string.
+// TODO change this to return a func() hash.Hash
 func LookupHash(algo string) (hash.Hash, error) {
+	hsh, err := LookupHashFunc(algo)
+	if err != nil {
+		return nil, err
+	}
+	return hsh(), nil
+}
+
+func LookupHashFunc(algo string) (func() hash.Hash, error) {
 	switch strings.ToLower(algo) {
 	case "md5":
-		return crypto.MD5.New(), nil
+		return crypto.MD5.New, nil
 	case "sha1":
-		return crypto.SHA1.New(), nil
+		return crypto.SHA1.New, nil
 	case "sha256":
-		return crypto.SHA256.New(), nil
+		return crypto.SHA256.New, nil
 	case "sha512":
-		return crypto.SHA512.New(), nil
+		return crypto.SHA512.New, nil
 	case "sha224":
-		return crypto.SHA224.New(), nil
+		return crypto.SHA224.New, nil
 	case "sha384":
-		return crypto.SHA384.New(), nil
+		return crypto.SHA384.New, nil
 	}
 	return nil, errors.New("Unsupported hash value.")
 }

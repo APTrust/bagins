@@ -2,6 +2,7 @@ package bagins
 
 import (
 	"fmt"
+	//"github.com/APTrust/bagins/bagutil"
 	"hash"
 	"io"
 	"os"
@@ -59,28 +60,42 @@ func (p *Payload) Add(srcPath string, dstPath string, hsh hash.Hash) (string, er
 }
 
 // Performs an add on every file under the directory supplied to the
-// method.  Returns a map of the filename and its fixity falue and a
-// list of errors.
-func (p *Payload) AddAll(src string, hsh hash.Hash) (fxs map[string]string, errs []error) {
+// method.  Returns a map of the filenames and its fixity value based
+// on the hash function passed and a slice of errors if there were any.
+func (p *Payload) AddAll(src string, hsh func() hash.Hash) (fxs map[string]string, errs []error) {
+
 	fxs = make(map[string]string)
+
+	// Collect files to add in scr directory.
+	var files []string
 	visit := func(pth string, info os.FileInfo, err error) error {
-		hsh.Reset()
-		if err != nil {
-			errs = append([]error{err})
-		}
 		if !info.IsDir() {
-			dstPath := strings.TrimPrefix(pth, src)
-			fx, err := p.Add(pth, dstPath, hsh)
-			if err != nil {
-				return err
-			}
-			fxs[dstPath] = fx
+			files = append([]string{pth})
 		}
 		return nil
 	}
 
 	if err := filepath.Walk(src, visit); err != nil {
 		errs = append([]error{err})
+	}
+
+	// Perform Payload.Add on each file found in src under a goroutine.
+	c := make(chan bool)
+	for idx := range files {
+		go func() {
+			dstPath := strings.TrimPrefix(files[idx], src)
+			fx, err := p.Add(files[idx], dstPath, hsh())
+			if err != nil {
+				errs = append([]error{err})
+			}
+			fxs[dstPath] = fx
+			c <- true
+		}()
+	}
+
+	// wait for all go routines to reply.
+	for i := 0; i < len(files); i++ {
+		<-c // Tick off as goroutines return true
 	}
 
 	return
