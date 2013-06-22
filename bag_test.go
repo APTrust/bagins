@@ -1,7 +1,6 @@
 package bagins_test
 
 import (
-	"fmt"
 	"github.com/APTrust/bagins"
 	"os"
 	"path"
@@ -27,12 +26,19 @@ func TestNewBag(t *testing.T) {
 
 	// Test making an actual bag.
 	bag, err := bagins.NewBag(os.TempDir(), "_GOTESTBAG_")
-	fmt.Println(bag.Path())
-	defer os.RemoveAll(bag.Path())
 	if err != nil {
 		t.Error(err)
 	}
+	defer os.RemoveAll(bag.Path())
+
+	// Confirm existance of basic bag structure.
 	if _, err = os.Stat(path.Join(os.TempDir(), "_GOTESTBAG_")); os.IsNotExist(err) {
-		t.Errorf("Bag directory does not exist! Returned: %v", err)
+		t.Error("Bag directory does not exist!")
+	}
+	if _, err = os.Stat(path.Join(os.TempDir(), "_GOTESTBAG_", "data")); os.IsNotExist(err) {
+		t.Error("Data directory does not exist!")
+	}
+	if _, err = os.Stat(path.Join(os.TempDir(), "_GOTESTBAG_", "bagit.txt")); os.IsNotExist(err) {
+		t.Error("bagit.txt does not exist!")
 	}
 }

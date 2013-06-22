@@ -32,21 +32,34 @@ func NewBag(location string, name string) (*Bag, error) {
 
 	// Create the bag object.
 	bag := new(Bag)
+	bag.manifests = make(map[string]*Manifest)
+	bag.tagfiles = make(map[string]*TagFile)
 	bag.pth = bagPath
 	bag.payload, err = NewPayload(location)
 	if err != nil {
 		return nil, err
 	}
-	// make the baginfo.txt file
-	// make the payload directory and initialize the data dir.
-	// make manifest.
+	tf, err := bag.createBagIt()
+	if err != nil {
+		return nil, err
+	}
+	bag.tagfiles["bagit"] = tf
+
 	return bag, nil
 }
 
-// func (b *Bag) createBagInfo() *TagFile, error {
-// 	baginfo, err := NewTagFile(path.Join(b.pth), "bag-info.txt")
-// 	baginfo.Data[]
-// }
+// Creates the required bagit.txt file as per the specification
+// http://tools.ietf.org/html/draft-kunze-bagit-09#section-2.1.1
+func (b *Bag) createBagIt() (*TagFile, error) {
+	bagit, err := NewTagFile(path.Join(b.Path(), "bagit.txt"))
+	if err != nil {
+		return nil, err
+	}
+	bagit.Data["BagIt-Version"] = "0.97"
+	bagit.Data["Tag-File-Character-Encoding"] = "UTF-8"
+	bagit.Create()
+	return bagit, nil
+}
 
 // Adds a file to the bag payload and adds the generated checksum to the
 // manifest.
