@@ -6,7 +6,6 @@ import (
 	_ "crypto/sha1"
 	_ "crypto/sha256"
 	_ "crypto/sha512"
-	"errors"
 	"fmt"
 	"hash"
 	"io"
@@ -14,30 +13,36 @@ import (
 	"strings"
 )
 
-type HashMaker func() hash.Hash
-
-type CheckAlgorithm struct {
-	Name string
-	Hash hash.Hash
+type ChecksumAlgorithm struct {
+	name string
+	hsh  func() hash.Hash
 }
 
-func NewCheckAlgorithm(name string, hsh hash.Hash) *CheckAlgorithm {
-	h := new(CheckAlgorithm)
-	h.Name = name
-	h.Hash = hsh
-	return h
+func (cs *ChecksumAlgorithm) New() hash.Hash {
+	return cs.hsh()
+}
+
+func (cs *ChecksumAlgorithm) Name() string {
+	return cs.name
+}
+
+func NewChecksumAlgorithm(name string, hsh func() hash.Hash) *ChecksumAlgorithm {
+	cs := new(ChecksumAlgorithm)
+	cs.name = name
+	cs.hsh = hsh
+	return cs
 }
 
 // Convienence method that looks up a checksum by name and assigns it
 // properly or returns an error.
-func NewCheckByName(name string) (*CheckAlgorithm, error) {
-	hsh, err := LookupHash(name)
+func NewCheckByName(name string) (*ChecksumAlgorithm, error) {
+	hsh, err := LookupHashFunc(name)
 	if err != nil {
 		return nil, err
 	}
-	h := new(CheckAlgorithm)
-	h.Name = strings.ToLower(name)
-	h.Hash = hsh
+	h := new(ChecksumAlgorithm)
+	h.name = strings.ToLower(name)
+	h.hsh = hsh
 	return h, nil
 }
 
@@ -86,5 +91,5 @@ func LookupHashFunc(algo string) (func() hash.Hash, error) {
 	case "sha384":
 		return crypto.SHA384.New, nil
 	}
-	return nil, errors.New("Unsupported hash value.")
+	return nil, fmt.Errorf("Invalid hash name %s:  Must be one of md5, sha1, sha256, sha512, sha224, sha284")
 }

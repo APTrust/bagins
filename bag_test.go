@@ -2,6 +2,7 @@ package bagins_test
 
 import (
 	"github.com/APTrust/bagins"
+	"github.com/APTrust/bagins/bagutil"
 	"os"
 	"path"
 	"testing"
@@ -9,9 +10,14 @@ import (
 
 func TestNewBag(t *testing.T) {
 
+	// Use this ChecksumAlgorithm for the tests.
+	algo := "sha1"
+	hsh, _ := bagutil.LookupHashFunc(algo)
+	cs := bagutil.NewChecksumAlgorithm(algo, hsh)
+
 	// It should raise an error if the destination dir does not exist.
 	badLocation := path.Join(os.TempDir(), "/GOTESTNOT_EXISTs/")
-	_, err := bagins.NewBag(badLocation, "_GOFAILBAG_")
+	_, err := bagins.NewBag(badLocation, "_GOFAILBAG_", cs)
 	if err == nil {
 		t.Error("NewBag function does not recognize when a directory does not exist!")
 	}
@@ -19,13 +25,15 @@ func TestNewBag(t *testing.T) {
 	// It should raise an error if the bag already exists.
 	os.MkdirAll(path.Join(badLocation, "_GOFAILBAG_"), 0766)
 	defer os.RemoveAll(badLocation)
-	_, err = bagins.NewBag(badLocation, "_GOFAILBAG_")
+
+	_, err = bagins.NewBag(badLocation, "_GOFAILBAG_", cs)
 	if err == nil {
 		t.Error("Error not thrown when bag already exists as expected.")
 	}
 
-	// Test making an actual bag.
-	bag, err := bagins.NewBag(os.TempDir(), "_GOTESTBAG_")
+	// It should create a bag without any errors.
+
+	bag, err := bagins.NewBag(os.TempDir(), "_GOTESTBAG_", cs)
 	if err != nil {
 		t.Error(err)
 	}

@@ -19,11 +19,11 @@ import (
 type Manifest struct {
 	name string            // Path to the
 	Data map[string]string // Map of filepath key and checksum value for that file
-	algo *bagutil.CheckAlgorithm
+	algo *bagutil.ChecksumAlgorithm
 }
 
 // Returns a pointer to a new manifest or returns an error if improperly named.
-func NewManifest(pth string, chkAlgo *bagutil.CheckAlgorithm) (*Manifest, error) {
+func NewManifest(pth string, chkAlgo *bagutil.ChecksumAlgorithm) (*Manifest, error) {
 	if _, err := os.Stat(pth); err != nil {
 		if os.IsNotExist(err) {
 			return nil, fmt.Errorf("Unable to create manifest.  Path does not exist: %s", pth)
@@ -33,7 +33,7 @@ func NewManifest(pth string, chkAlgo *bagutil.CheckAlgorithm) (*Manifest, error)
 	}
 	m := new(Manifest)
 	m.Data = make(map[string]string)
-	m.name = path.Join(pth, "manifest-"+strings.ToLower(chkAlgo.Name)+".txt")
+	m.name = path.Join(pth, "manifest-"+strings.ToLower(chkAlgo.Name())+".txt")
 	m.algo = chkAlgo
 	return m, nil
 }
@@ -41,7 +41,7 @@ func NewManifest(pth string, chkAlgo *bagutil.CheckAlgorithm) (*Manifest, error)
 func (m *Manifest) RunChecksums() []error {
 	invalidSums := make([]error, 0)
 	for key, sum := range m.Data {
-		fileChecksum, err := bagutil.FileChecksum(key, m.algo.Hash)
+		fileChecksum, err := bagutil.FileChecksum(key, m.algo.New())
 		if sum == "" {
 			m.Data[key] = fileChecksum
 		}
