@@ -54,6 +54,8 @@ func NewBag(location string, name string, cs *bagutil.ChecksumAlgorithm) (*Bag, 
 	}
 	bag.tagfiles["bagit"] = tf
 
+	// TODO initiate a baginfo.txt file as well, even if it's blank.
+
 	return bag, nil
 }
 
