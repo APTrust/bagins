@@ -22,6 +22,10 @@ func (cs *ChecksumAlgorithm) New() hash.Hash {
 	return cs.hsh()
 }
 
+func (cs *ChecksumAlgorithm) Algo() func() hash.Hash {
+	return cs.hsh
+}
+
 func (cs *ChecksumAlgorithm) Name() string {
 	return cs.name
 }

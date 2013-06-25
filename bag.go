@@ -34,15 +34,21 @@ func NewBag(location string, name string, cs *bagutil.ChecksumAlgorithm) (*Bag, 
 
 	// Create the bag object.
 	bag := new(Bag)
+	defer bag.Close()
+	bag.pth = bagPath
 	bag.cs = cs
 	bag.manifests = make(map[string]*Manifest)
+	bag.manifests[cs.Name()], err = NewManifest(bag.Path(), cs)
+	if err != nil {
+		return nil, err
+	}
 	bag.tagfiles = make(map[string]*TagFile)
-	bag.pth = bagPath
+
 	bag.payload, err = NewPayload(location)
 	if err != nil {
 		return nil, err
 	}
-	tf, err := bag.createBagIt()
+	tf, err := bag.createBagItFile()
 	if err != nil {
 		return nil, err
 	}
@@ -53,14 +59,13 @@ func NewBag(location string, name string, cs *bagutil.ChecksumAlgorithm) (*Bag, 
 
 // Creates the required bagit.txt file as per the specification
 // http://tools.ietf.org/html/draft-kunze-bagit-09#section-2.1.1
-func (b *Bag) createBagIt() (*TagFile, error) {
+func (b *Bag) createBagItFile() (*TagFile, error) {
 	bagit, err := NewTagFile(path.Join(b.Path(), "bagit.txt"))
 	if err != nil {
 		return nil, err
 	}
 	bagit.Data["BagIt-Version"] = "0.97"
 	bagit.Data["Tag-File-Character-Encoding"] = "UTF-8"
-	bagit.Create()
 	return bagit, nil
 }
 
@@ -72,8 +77,17 @@ func (b *Bag) PackFile(src string, dst string) error {
 
 // Performans a Bag.Add on all files found under the src location including all
 // subdirectories.
-func (b *Bag) PackDir(src string) error {
-	return errors.New("Not implemented")
+func (b *Bag) PackDir(src string) (errs []error) {
+	data, errs := b.payload.AddAll(src, b.cs.Algo())
+	if mf, err := b.Manifest(); err != nil {
+		errs = append(errs, err)
+	} else {
+		for key := range data {
+			mf.Data[key] = data[key]
+		}
+	}
+
+	return errs
 }
 
 func (b *Bag) AddManifest(algo string) error {
@@ -85,28 +99,65 @@ func (b *Bag) AddTagfile(name string) error {
 }
 
 // Returns the data fields for the baginfo.txt tag file in key, value pairs.
-func (b *Bag) BagInfo() (map[string]string, error) {
-	tf, err := b.TagData("bag-info")
+func (b *Bag) BagInfo() (*TagFile, error) {
+	tf, err := b.TagFile(b.Path() + "bag-info")
 	if err != nil {
 		return nil, err
 	}
 	return tf, nil
 }
 
-func (b *Bag) TagData(name string) (map[string]string, error) {
+func (b *Bag) TagFile(name string) (*TagFile, error) {
 	if tf, ok := b.tagfiles[name]; ok {
-		return tf.Data, nil
+		return tf, nil
 	}
 	return nil, fmt.Errorf("Unable to find tagfile %s", name)
 }
 
-func (b *Bag) ManifestData(algo string) (map[string]string, error) {
+func (b *Bag) Manifest() (*Manifest, error) {
+	mf, err := b.ManifestFile(b.cs.Name())
+	if err != nil {
+		return nil, err
+	}
+	return mf, nil
+}
+
+func (b *Bag) ManifestFile(algo string) (*Manifest, error) {
 	if mf, ok := b.manifests[algo]; ok {
-		return mf.Data, nil
+		return mf, nil
 	}
 	return nil, fmt.Errorf("Unable to find manifest-%s.txt", algo)
 }
 
 func (b *Bag) Path() string {
 	return b.pth
+}
+
+// This method writes all the relevant tag and manifest files to finish off the
+// bag.
+func (b *Bag) Close() (errs []error) {
+
+	// Write all the manifest files.
+	for key := range b.manifests {
+		if mf, err := b.ManifestFile(key); err != nil {
+			errs = append(errs, err)
+		} else {
+			if err = mf.Create(); err != nil {
+				errs = append(errs, err)
+			}
+		}
+
+	}
+
+	// TODO Write all the tag files.
+	for key := range b.tagfiles {
+		if tf, err := b.TagFile(key); err != nil {
+			errs = append(errs, err)
+		} else {
+			if err = tf.Create(); err != nil {
+				errs = append(errs, err)
+			}
+		}
+	}
+	return
 }

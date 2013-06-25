@@ -35,7 +35,13 @@ func NewTagFile(name string) (tf *TagFile, err error) {
 	return tf, err
 }
 
-// Writes key value pairs to a tag file.
+// Returns the named filepath of the tagfile.
+func (tf *TagFile) Name() string {
+	return tf.name
+}
+
+// Creates the named tagfile and writes key value pairs to it, with indented
+// formatting as indicated in the BagIt spec.
 func (tf *TagFile) Create() error {
 	// Create directory if needed.
 	if err := os.MkdirAll(path.Dir(tf.name), 0777); err != nil {
