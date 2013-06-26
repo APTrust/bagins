@@ -2,7 +2,6 @@
 package bagins
 
 import (
-	"errors"
 	"fmt"
 	"github.com/APTrust/bagins/bagutil"
 	"os"
@@ -54,15 +53,16 @@ func NewBag(location string, name string, cs *bagutil.ChecksumAlgorithm) (*Bag, 
 	}
 	bag.tagfiles["bagit"] = tf
 
-	// TODO initiate a baginfo.txt file as well, even if it's blank.
-
 	return bag, nil
 }
 
 // Creates the required bagit.txt file as per the specification
 // http://tools.ietf.org/html/draft-kunze-bagit-09#section-2.1.1
 func (b *Bag) createBagItFile() (*TagFile, error) {
-	bagit, err := NewTagFile(path.Join(b.Path(), "bagit.txt"))
+	if err := b.AddTagfile("bagit.txt"); err != nil {
+		return nil, err
+	}
+	bagit, err := b.TagFile("bagit.txt")
 	if err != nil {
 		return nil, err
 	}
@@ -73,13 +73,21 @@ func (b *Bag) createBagItFile() (*TagFile, error) {
 
 // Adds a file to the bag payload and adds the generated checksum to the
 // manifest.
-func (b *Bag) PackFile(src string, dst string) error {
-	return errors.New("Not implemented")
+func (b *Bag) AddFile(src string, dst string) error {
+	dst = path.Join(b.Path(), dst)
+	fx, err := b.payload.Add(src, dst, b.cs.New())
+	if err != nil {
+		return err
+	}
+	if mf, err := b.Manifest(); err != nil {
+		mf.Data[dst] = fx
+	}
+	return err
 }
 
 // Performans a Bag.Add on all files found under the src location including all
 // subdirectories.
-func (b *Bag) PackDir(src string) (errs []error) {
+func (b *Bag) AddDir(src string) (errs []error) {
 	data, errs := b.payload.AddAll(src, b.cs.Algo())
 	if mf, err := b.Manifest(); err != nil {
 		errs = append(errs, err)
@@ -88,21 +96,37 @@ func (b *Bag) PackDir(src string) (errs []error) {
 			mf.Data[key] = data[key]
 		}
 	}
-
 	return errs
 }
 
 func (b *Bag) AddManifest(algo string) error {
-	return errors.New("Not implemented")
+	hsh, err := bagutil.LookupHashFunc(algo)
+	if err != nil {
+		return err
+	}
+	cs := bagutil.NewChecksumAlgorithm(algo, hsh)
+	if err != nil {
+		return err
+	}
+	mf, err := NewManifest(b.Path(), cs)
+	if err != nil {
+		return err
+	}
+	b.manifests[algo] = mf
+	return nil
 }
 
 func (b *Bag) AddTagfile(name string) error {
-	return errors.New("Not implemented")
+	tf, err := NewTagFile(path.Join(b.Path(), name))
+	if tf != nil {
+		b.tagfiles[name] = tf
+	}
+	return err
 }
 
 // Returns the data fields for the baginfo.txt tag file in key, value pairs.
 func (b *Bag) BagInfo() (*TagFile, error) {
-	tf, err := b.TagFile(b.Path() + "bag-info")
+	tf, err := b.TagFile("bag-info.txt")
 	if err != nil {
 		return nil, err
 	}
