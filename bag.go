@@ -17,6 +17,8 @@ type Bag struct {
 	cs        *bagutil.ChecksumAlgorithm
 }
 
+// METHODS FOR CREATING AND INITALIZING BAGS
+
 // Creates a new bag in the provided location and name.  Returns an error
 // if the location does not exist or if the bag does already exist.
 func NewBag(location string, name string, cs *bagutil.ChecksumAlgorithm) (*Bag, error) {
@@ -71,6 +73,8 @@ func (b *Bag) createBagItFile() (*TagFile, error) {
 	return bagit, nil
 }
 
+// METHODS FOR MANAGING BAG PAYLOAD
+
 // Adds a file to the bag payload and adds the generated checksum to the
 // manifest.
 func (b *Bag) AddFile(src string, dst string) error {
@@ -99,6 +103,8 @@ func (b *Bag) AddDir(src string) (errs []error) {
 	return errs
 }
 
+// METHODS FOR MANAGING BAG MANIFESTS
+
 func (b *Bag) AddManifest(algo string) error {
 	hsh, err := bagutil.LookupHashFunc(algo)
 	if err != nil {
@@ -115,6 +121,23 @@ func (b *Bag) AddManifest(algo string) error {
 	b.manifests[algo] = mf
 	return nil
 }
+
+func (b *Bag) ManifestFile(algo string) (*Manifest, error) {
+	if mf, ok := b.manifests[algo]; ok {
+		return mf, nil
+	}
+	return nil, fmt.Errorf("Unable to find manifest-%s.txt", algo)
+}
+
+func (b *Bag) Manifest() (*Manifest, error) {
+	mf, err := b.ManifestFile(b.cs.Name())
+	if err != nil {
+		return nil, err
+	}
+	return mf, nil
+}
+
+// METHODS FOR MANAGING BAG TAG FILES
 
 func (b *Bag) AddTagfile(name string) error {
 	tf, err := NewTagFile(path.Join(b.Path(), name))
@@ -140,21 +163,13 @@ func (b *Bag) TagFile(name string) (*TagFile, error) {
 	return nil, fmt.Errorf("Unable to find tagfile %s", name)
 }
 
-func (b *Bag) Manifest() (*Manifest, error) {
-	mf, err := b.ManifestFile(b.cs.Name())
-	if err != nil {
-		return nil, err
-	}
-	return mf, nil
-}
+// TODO create methods for managing fetch file.
 
-func (b *Bag) ManifestFile(algo string) (*Manifest, error) {
-	if mf, ok := b.manifests[algo]; ok {
-		return mf, nil
-	}
-	return nil, fmt.Errorf("Unable to find manifest-%s.txt", algo)
-}
+// TODO create methods to manage tagmanifest files.
 
+// METHODS FOR MANAGING OR RETURNING INFORMATION ABOUT THE BAG ITSELF
+
+// Returns the full path of the bag including it's own directory.
 func (b *Bag) Path() string {
 	return b.pth
 }
@@ -187,3 +202,10 @@ func (b *Bag) Close() (errs []error) {
 	}
 	return
 }
+
+// TODO create a method to return the name of the bag root folder alone as the
+// bag name
+
+// TODO create method to return a list of tag files.
+
+// TODO create a method to return a list of manifest files.
