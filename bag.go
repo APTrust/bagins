@@ -87,7 +87,7 @@ func (b *Bag) AddFile(src string, dst string) error {
 		return err
 	}
 	if mf, err := b.Manifest(); err == nil {
-		mf.Data[dst] = fx
+		mf.Data[filepath.Join("data", dst)] = fx
 	}
 	return err
 }
@@ -96,12 +96,12 @@ func (b *Bag) AddFile(src string, dst string) error {
 // subdirectories.
 func (b *Bag) AddDir(src string) (errs []error) {
 	data, errs := b.payload.AddAll(src, b.cs.Algo())
-	if mf, err := b.Manifest(); err != nil {
+	mf, err := b.Manifest()
+	if err != nil {
 		errs = append(errs, err)
-	} else {
-		for key := range data {
-			mf.Data[key] = data[key]
-		}
+	}
+	for key := range data {
+		mf.Data[filepath.Join("data", key)] = data[key]
 	}
 	return errs
 }

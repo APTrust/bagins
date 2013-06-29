@@ -75,27 +75,26 @@ func (p *Payload) AddAll(src string, hsh func() hash.Hash) (fxs map[string]strin
 	var files []string
 	visit := func(pth string, info os.FileInfo, err error) error {
 		if !info.IsDir() {
-			files = append([]string{pth})
+			files = append(files, pth)
 		}
-		return nil
+		return err
 	}
 
 	if err := filepath.Walk(src, visit); err != nil {
-		errs = append([]error{err})
+		errs = append(errs, err)
 	}
-
 	// Perform Payload.Add on each file found in src under a goroutine.
 	c := make(chan bool)
 	for idx := range files {
-		go func() {
-			dstPath := strings.TrimPrefix(files[idx], src)
-			fx, err := p.Add(files[idx], dstPath, hsh())
+		go func(file string, src string, hsh func() hash.Hash) {
+			dstPath := strings.TrimPrefix(file, src)
+			fx, err := p.Add(file, dstPath, hsh())
 			if err != nil {
-				errs = append([]error{err})
+				errs = append(errs, err)
 			}
 			fxs[dstPath] = fx
 			c <- true
-		}()
+		}(files[idx], src, hsh)
 	}
 
 	// wait for all go routines to reply.

@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -96,11 +97,62 @@ func TestAddFile(t *testing.T) {
 
 	// It should have calulated the fixity and put it in the manifest.
 	mf, _ := bag.Manifest()
-	fx, ok := mf.Data[expFile]
+	expKey := filepath.Join("data", expFile)
+	fx, ok := mf.Data[expKey]
 	if !ok {
-		t.Error("Unable to find entry in manfest: ", expFile)
+		t.Error("Unable to find entry in manfest: ", expKey)
 	}
 	if len(fx) != 40 {
 		t.Errorf("Expected %d character fixity but returned: %d", 32, len(fx))
+	}
+}
+
+func TestAddDir(t *testing.T) {
+
+	// Setup source files to test
+	srcDir, _ := ioutil.TempDir("", "_GOTEST_PAYLOAD_SRC_")
+	for i := 0; i < 50; i++ {
+		fi, _ := ioutil.TempFile(srcDir, "TEST_GO_ADDFILE_")
+		fi.WriteString("Test the checksum")
+		fi.Close()
+	}
+	defer os.RemoveAll(srcDir)
+
+	// Setup the test bag
+	algo := "sha1"
+	hsh, _ := bagutil.LookupHashFunc(algo)
+	cs := bagutil.NewChecksumAlgorithm(algo, hsh)
+
+	bag, err := bagins.NewBag(os.TempDir(), "_GOTESTBAG_", cs)
+	if err != nil {
+		t.Error(err)
+	}
+	defer os.RemoveAll(bag.Path())
+
+	// It should produce no errors
+	if errs := bag.AddDir(srcDir); len(errs) != 0 {
+		t.Error(errs)
+	}
+
+	// It should produce 50 manifest entries
+
+	// It should generate entries in the manifest
+	mf, _ := bag.Manifest()
+
+	// It should produce 50 manifest entries
+	if len(mf.Data) != 50 {
+		t.Error("Expected 50 manifest entries but returned", len(mf.Data))
+	}
+	// It should contain the proper checksums for each file.
+	for key, fx := range mf.Data {
+		expFx := "da909ba395016f2a64b04d706520db6afa74fc95"
+		expPfx := filepath.Join("data", "TEST_GO_ADDFILE_")
+
+		if fx != expFx {
+			t.Error("Fixity error!", fx, "does not match expected", expFx)
+		}
+		if !strings.HasPrefix(key, expPfx) {
+			t.Error(key, "does not start with", expPfx)
+		}
 	}
 }
