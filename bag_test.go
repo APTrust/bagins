@@ -59,30 +59,30 @@ func TestNewBag(t *testing.T) {
 }
 
 // Test closing the bag in various secenarios for expected behavior.
-// func TestBagClose(t *testing.T) {
-// 	// Use this ChecksumAlgorithm for the tests.
-// 	algo := "sha1"
-// 	hsh, _ := bagutil.LookupHashFunc(algo)
-// 	cs := bagutil.NewChecksumAlgorithm(algo, hsh)
+func TestBagClose(t *testing.T) {
+	// Use this ChecksumAlgorithm for the tests.
+	algo := "sha1"
+	hsh, _ := bagutil.LookupHashFunc(algo)
+	cs := bagutil.NewChecksumAlgorithm(algo, hsh)
 
-// 	bag, err := bagins.NewBag(os.TempDir(), "_GOTESTBAG_", cs)
-// 	if err != nil {
-// 		t.Error(err)
-// 	}
-// 	defer os.RemoveAll(bag.Path())
+	bag, err := bagins.NewBag(os.TempDir(), "_GOTESTBAG_", cs)
+	if err != nil {
+		t.Error(err)
+	}
+	defer os.RemoveAll(bag.Path())
 
-// 	// It should find all of the following files and directories.
-// 	if _, err = os.Stat(path.Join(os.TempDir(), "_GOTESTBAG_")); os.IsNotExist(err) {
-// 		t.Error("Bag directory does not exist!")
-// 	}
-// 	if data, err := os.Stat(path.Join(os.TempDir(), "_GOTESTBAG_", "data")); os.IsNotExist(err) || !data.IsDir() {
-// 		t.Error("Data directory does not exist or is not a directory!")
-// 	}
-// 	if _, err = os.Stat(path.Join(os.TempDir(), "_GOTESTBAG_", "bagit.txt")); os.IsNotExist(err) {
-// 		t.Error("bagit.txt does not exist!")
-// 	}
-// 	if _, err = os.Stat(path.Join(os.TempDir(), "_GOTESTBAG_", "manifest-sha1.txt")); os.IsNotExist(err) {
-// 		t.Error("manifest-sha1.txt does not exist!")
-// 	}
+	// It should find all of the following files and directories.
+	if _, err = os.Stat(path.Join(os.TempDir(), "_GOTESTBAG_")); os.IsNotExist(err) {
+		t.Error("Bag directory does not exist!")
+	}
+	if data, err := os.Stat(path.Join(os.TempDir(), "_GOTESTBAG_", "data")); os.IsNotExist(err) || !data.IsDir() {
+		t.Error("Data directory does not exist or is not a directory!")
+	}
+	if _, err = os.Stat(path.Join(os.TempDir(), "_GOTESTBAG_", "bagit.txt")); os.IsNotExist(err) {
+		t.Error("bagit.txt does not exist!")
+	}
+	if _, err = os.Stat(path.Join(os.TempDir(), "_GOTESTBAG_", "manifest-sha1.txt")); os.IsNotExist(err) {
+		t.Error("manifest-sha1.txt does not exist!")
+	}
 
-// }
+}
