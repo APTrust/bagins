@@ -112,9 +112,9 @@ func BenchmarkPayload(b *testing.B) {
 	defer os.RemoveAll(pDir)
 
 	// Make src temp test files
-	for i := 0; i < 5000; i++ {
+	for i := 0; i < 300; i++ {
 		tstFile, _ := ioutil.TempFile(srcDir, "_GOTEST_FILE_")
-		tstFile.WriteString(strings.Repeat("Test the checksum. ", 50000))
+		tstFile.WriteString(strings.Repeat("Test the checksum. ", 500000)) // produces ~9 meg text file.
 		tstFile.Close()
 	}
 

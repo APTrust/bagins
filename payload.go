@@ -41,8 +41,10 @@ func (p *Payload) Add(srcPath string, dstPath string, hsh hash.Hash) (string, er
 	}
 	defer src.Close()
 
+	// TODO simplify this! returns on windows paths are messing with me so I'm
+	// going through this step wise.
 	dstFile := filepath.Join(p.dir, dstPath)
-	if err := os.MkdirAll(filepath.Dir(dstFile), 0777); err != nil {
+	if err := os.MkdirAll(filepath.Dir(dstFile), 0766); err != nil {
 		return "", err
 	}
 
