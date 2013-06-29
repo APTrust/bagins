@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/APTrust/bagins/bagutil"
 	"os"
-	"path"
+	"path/filepath"
 )
 
 // Basic type referencing main elements of a bag.
@@ -23,12 +23,12 @@ type Bag struct {
 // if the location does not exist or if the bag does already exist.
 func NewBag(location string, name string, cs *bagutil.ChecksumAlgorithm) (*Bag, error) {
 	// Start with creating the directories.
-	bagPath := path.Join(location, name)
+	bagPath := filepath.Join(location, name)
 	err := os.Mkdir(bagPath, 0755)
 	if err != nil {
 		return nil, err
 	}
-	err = os.Mkdir(path.Join(bagPath, "/data/"), 0755)
+	err = os.Mkdir(filepath.Join(bagPath, "/data/"), 0755)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +78,7 @@ func (b *Bag) createBagItFile() (*TagFile, error) {
 // Adds a file to the bag payload and adds the generated checksum to the
 // manifest.
 func (b *Bag) AddFile(src string, dst string) error {
-	dst = path.Join(b.Path(), dst)
+	dst = filepath.Join(b.Path(), dst)
 	fx, err := b.payload.Add(src, dst, b.cs.New())
 	if err != nil {
 		return err
@@ -140,7 +140,7 @@ func (b *Bag) Manifest() (*Manifest, error) {
 // METHODS FOR MANAGING BAG TAG FILES
 
 func (b *Bag) AddTagfile(name string) error {
-	tf, err := NewTagFile(path.Join(b.Path(), name))
+	tf, err := NewTagFile(filepath.Join(b.Path(), name))
 	if tf != nil {
 		b.tagfiles[name] = tf
 	}

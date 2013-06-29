@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/APTrust/bagins/bagutil"
 	"os"
-	"path"
+	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -33,7 +33,7 @@ func NewManifest(pth string, chkAlgo *bagutil.ChecksumAlgorithm) (*Manifest, err
 	}
 	m := new(Manifest)
 	m.Data = make(map[string]string)
-	m.name = path.Join(pth, "manifest-"+strings.ToLower(chkAlgo.Name())+".txt")
+	m.name = filepath.Join(pth, "manifest-"+strings.ToLower(chkAlgo.Name())+".txt")
 	m.algo = chkAlgo
 	return m, nil
 }
@@ -61,7 +61,7 @@ func (m *Manifest) Create() error {
 		return errors.New("Manifest must have values for basename and algo set to create a file.")
 	}
 	// Create directory if needed.
-	basepath := path.Dir(m.name)
+	basepath := filepath.Dir(m.name)
 
 	if err := os.MkdirAll(basepath, 0777); err != nil {
 		return errors.New("Error creating manifest directory: " + err.Error())
@@ -86,13 +86,13 @@ func (m *Manifest) Create() error {
 
 // Returns a sting of the filename for this manifest file based on Path, BaseName and Algo
 func (m *Manifest) Name() string {
-	return path.Clean(m.name)
+	return filepath.Clean(m.name)
 }
 
 // Tries to parse the algorithm name from a manifest filename.  Returns
 // an error if unable to do so.
 func GetAlgoName(name string) (string, error) {
-	filename := path.Base(name)
+	filename := filepath.Base(name)
 	re, err := regexp.Compile(`(^.*\-)(.*)(\..*$)`)
 	if err != nil {
 		return "", err
