@@ -6,7 +6,6 @@ import (
 	"hash"
 	"io"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 )
@@ -19,11 +18,11 @@ type Payload struct {
 
 // Returns a new Payload struct managing the path provied.
 func NewPayload(location string) (*Payload, error) {
-	if _, err := os.Stat(path.Clean(location)); os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Clean(location)); os.IsNotExist(err) {
 		return nil, fmt.Errorf("Payload directory does not exist! Returned: %v", err)
 	}
 	p := new(Payload)
-	p.dir = path.Clean(location)
+	p.dir = filepath.Clean(location)
 	return p, nil
 }
 
@@ -42,8 +41,8 @@ func (p *Payload) Add(srcPath string, dstPath string, hsh hash.Hash) (string, er
 	}
 	defer src.Close()
 
-	dstFile := path.Join(p.dir, dstPath)
-	if err := os.MkdirAll(path.Dir(dstFile), 0777); err != nil {
+	dstFile := filepath.Join(p.dir, dstPath)
+	if err := os.MkdirAll(filepath.Dir(dstFile), 0777); err != nil {
 		return "", err
 	}
 

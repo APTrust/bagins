@@ -7,7 +7,7 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -25,8 +25,8 @@ func TestNewManifest(t *testing.T) {
 
 func TestGetAlgoName(t *testing.T) {
 	tst := make([]string, 0)
-	tst = append(tst, path.Join(os.TempDir(), "_GOTEST_manifest-sha1.txt"))
-	tst = append(tst, path.Join(os.TempDir(), "_GOTEST_manifest-md5-sha1.txt"))
+	tst = append(tst, filepath.Join(os.TempDir(), "_GOTEST_manifest-sha1.txt"))
+	tst = append(tst, filepath.Join(os.TempDir(), "_GOTEST_manifest-md5-sha1.txt"))
 	for i := range tst {
 		name, _ := bagins.GetAlgoName(tst[i])
 		if name != "sha1" {

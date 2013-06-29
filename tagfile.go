@@ -13,7 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -24,13 +24,13 @@ type TagFile struct {
 }
 
 func NewTagFile(name string) (tf *TagFile, err error) {
-	_, err = os.Stat(path.Dir(name))
+	_, err = os.Stat(filepath.Dir(name))
 	re, _ := regexp.Compile(`.*\.txt`)
-	if !re.MatchString(path.Base(name)) {
-		err = errors.New(fmt.Sprint("Tagfiles must end in .txt and contain at least 1 letter.  Provided: ", path.Base(name)))
+	if !re.MatchString(filepath.Base(name)) {
+		err = errors.New(fmt.Sprint("Tagfiles must end in .txt and contain at least 1 letter.  Provided: ", filepath.Base(name)))
 	}
 	tf = new(TagFile)
-	tf.name = path.Clean(name)
+	tf.name = filepath.Clean(name)
 	tf.Data = make(map[string]string)
 	return tf, err
 }
@@ -44,7 +44,7 @@ func (tf *TagFile) Name() string {
 // formatting as indicated in the BagIt spec.
 func (tf *TagFile) Create() error {
 	// Create directory if needed.
-	if err := os.MkdirAll(path.Dir(tf.name), 0777); err != nil {
+	if err := os.MkdirAll(filepath.Dir(tf.name), 0777); err != nil {
 		return err
 	}
 
