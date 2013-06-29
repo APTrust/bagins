@@ -75,13 +75,13 @@ func TestPayloadAdd(t *testing.T) {
 }
 
 func TestPayloadAddAll(t *testing.T) {
-	// Make src temp dir
+	// Setup directories to test on
 	srcDir, _ := ioutil.TempDir("", "_GOTEST_SRCDIR_")
 	defer os.RemoveAll(srcDir)
 	pDir, _ := ioutil.TempDir("", "_GOTEST_Payload_")
 	defer os.RemoveAll(pDir)
 
-	// Make src temp test files
+	// Setup test files
 	for i := 0; i < 100; i++ {
 		tstFile, _ := ioutil.TempFile(srcDir, "_GOTEST_FILE_")
 		tstFile.WriteString("Test the checksum")
@@ -90,9 +90,16 @@ func TestPayloadAddAll(t *testing.T) {
 
 	p, _ := bagins.NewPayload(pDir)
 	fxs, errs := p.AddAll(srcDir, md5.New)
+
+	// It should not return an error.
 	if errs != nil {
 		t.Errorf("Add all returned %d errors", len(errs))
 	}
+	// It should have fixity values for 100 files
+	if len(fxs) != 100 {
+		t.Errorf("Expected 100 fixity values but returned %d", len(fxs))
+	}
+
 	for key := range fxs {
 		fileChk, err := bagutil.FileChecksum(filepath.Join(p.Name(), key), md5.New())
 		if err != nil {
@@ -112,9 +119,9 @@ func BenchmarkPayload(b *testing.B) {
 	defer os.RemoveAll(pDir)
 
 	// Make src temp test files
-	for i := 0; i < 5000; i++ {
+	for i := 0; i < 300; i++ {
 		tstFile, _ := ioutil.TempFile(srcDir, "_GOTEST_FILE_")
-		tstFile.WriteString(strings.Repeat("Test the checksum. ", 50000))
+		tstFile.WriteString(strings.Repeat("Test the checksum. ", 500000)) // produces ~9 meg text file.
 		tstFile.Close()
 	}
 

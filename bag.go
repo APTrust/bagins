@@ -28,10 +28,6 @@ func NewBag(location string, name string, cs *bagutil.ChecksumAlgorithm) (*Bag, 
 	if err != nil {
 		return nil, err
 	}
-	err = os.Mkdir(filepath.Join(bagPath, "/data/"), 0755)
-	if err != nil {
-		return nil, err
-	}
 
 	// Create the bag object.
 	bag := new(Bag)
@@ -39,16 +35,24 @@ func NewBag(location string, name string, cs *bagutil.ChecksumAlgorithm) (*Bag, 
 	bag.pth = bagPath
 	bag.cs = cs
 	bag.manifests = make(map[string]*Manifest)
-	bag.manifests[cs.Name()], err = NewManifest(bag.Path(), cs)
-	if err != nil {
+
+	if err = bag.AddManifest(cs.Name()); err != nil {
 		return nil, err
 	}
 	bag.tagfiles = make(map[string]*TagFile)
 
-	bag.payload, err = NewPayload(location)
+	// Make the payload directory and such.
+	plPath := filepath.Join(bag.Path(), "data")
+	err = os.Mkdir(plPath, 0755)
 	if err != nil {
 		return nil, err
 	}
+	bag.payload, err = NewPayload(plPath)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create the BagIt.txt Tagfile
 	tf, err := bag.createBagItFile()
 	if err != nil {
 		return nil, err
@@ -78,13 +82,12 @@ func (b *Bag) createBagItFile() (*TagFile, error) {
 // Adds a file to the bag payload and adds the generated checksum to the
 // manifest.
 func (b *Bag) AddFile(src string, dst string) error {
-	dst = filepath.Join(b.Path(), dst)
 	fx, err := b.payload.Add(src, dst, b.cs.New())
 	if err != nil {
 		return err
 	}
-	if mf, err := b.Manifest(); err != nil {
-		mf.Data[dst] = fx
+	if mf, err := b.Manifest(); err == nil {
+		mf.Data[filepath.Join("data", dst)] = fx
 	}
 	return err
 }
@@ -93,12 +96,12 @@ func (b *Bag) AddFile(src string, dst string) error {
 // subdirectories.
 func (b *Bag) AddDir(src string) (errs []error) {
 	data, errs := b.payload.AddAll(src, b.cs.Algo())
-	if mf, err := b.Manifest(); err != nil {
+	mf, err := b.Manifest()
+	if err != nil {
 		errs = append(errs, err)
-	} else {
-		for key := range data {
-			mf.Data[key] = data[key]
-		}
+	}
+	for key := range data {
+		mf.Data[filepath.Join("data", key)] = data[key]
 	}
 	return errs
 }
