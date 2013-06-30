@@ -9,10 +9,10 @@ import (
 
 var testAlgos []string = []string{"sha1", "sha256", "md5"}
 
-func TestNewCheckAlgorithm(t *testing.T) {
+func TestNewChecksumAlgorithm(t *testing.T) {
 	for idx := range testAlgos {
-		hsh, _ := LookupHash(testAlgos[idx])
-		chkAlgo := NewCheckAlgorithm(testAlgos[idx], hsh)
+		hsh, _ := LookupHashFunc(testAlgos[idx])
+		chkAlgo := NewChecksumAlgorithm(testAlgos[idx], hsh)
 		if chkAlgo == nil {
 			t.Error("Returned nil for check algorithm")
 		}

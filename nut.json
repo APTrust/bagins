@@ -1,0 +1,17 @@
+{
+  "Version": "0.5.0",
+  "Vendor": "aptrust",
+  "Authors": [
+    {
+      "FullName": "Scott Turnbull",
+      "Email": "scott.turnbull@aptrust.org"
+    }
+  ],
+  "ExtraFiles": [
+    "README.rst",
+    "LICENSE",
+    "CONTRIBUTING.md",
+    "CHANGELOG"
+  ],
+  "Homepage": "https://github.com/APTrust/"
+}
