@@ -10,6 +10,18 @@ import (
 	"testing"
 )
 
+func setupTestBag() (*bagins.Bag, error) {
+	algo := "sha1"
+	hsh, _ := bagutil.LookupHashFunc(algo)
+	cs := bagutil.NewChecksumAlgorithm(algo, hsh)
+
+	bag, err := bagins.NewBag(os.TempDir(), "_GOTESTBAG_", cs)
+	if err != nil {
+		return nil, err
+	}
+	return bag, nil
+}
+
 func TestNewBag(t *testing.T) {
 
 	// Use this ChecksumAlgorithm for the tests.
@@ -34,10 +46,7 @@ func TestNewBag(t *testing.T) {
 	}
 
 	// It should create a bag without any errors.
-	bag, err := bagins.NewBag(os.TempDir(), "_GOTESTBAG_", cs)
-	if err != nil {
-		t.Error(err)
-	}
+	bag, err := setupTestBag()
 	defer os.RemoveAll(bag.Path())
 
 	// It should find all of the following files and directories.
@@ -68,29 +77,22 @@ func TestAddFile(t *testing.T) {
 	defer os.Remove(fi.Name())
 
 	// Setup the Test Bag
-	algo := "sha1"
-	hsh, _ := bagutil.LookupHashFunc(algo)
-	cs := bagutil.NewChecksumAlgorithm(algo, hsh)
-
-	bag, err := bagins.NewBag(os.TempDir(), "_GOTESTBAG_", cs)
-	if err != nil {
-		t.Error(err)
-	}
+	bag, _ := setupTestBag()
 	defer os.RemoveAll(bag.Path())
 
 	// It should return an error when trying to add a file that doesn't exist.
-	if err = bag.AddFile("idontexist.txt", "idontexist.txt"); err == nil {
+	if err := bag.AddFile("idontexist.txt", "idontexist.txt"); err == nil {
 		t.Errorf("Adding a nonexistant file did not generate an error!")
 	}
 
 	// It should and a file to the data directory and generate a fixity value.
 	expFile := "my/nested/dir/mytestfile.txt"
-	if err = bag.AddFile(fi.Name(), expFile); err != nil {
+	if err := bag.AddFile(fi.Name(), expFile); err != nil {
 		t.Error(err)
 	}
 
 	// It should have created the file in the payload directory.
-	_, err = os.Stat(filepath.Join(bag.Path(), "data", expFile))
+	_, err := os.Stat(filepath.Join(bag.Path(), "data", expFile))
 	if err != nil {
 		t.Error("Testing if payload file created:", err)
 	}
@@ -119,14 +121,7 @@ func TestAddDir(t *testing.T) {
 	defer os.RemoveAll(srcDir)
 
 	// Setup the test bag
-	algo := "sha1"
-	hsh, _ := bagutil.LookupHashFunc(algo)
-	cs := bagutil.NewChecksumAlgorithm(algo, hsh)
-
-	bag, err := bagins.NewBag(os.TempDir(), "_GOTESTBAG_", cs)
-	if err != nil {
-		t.Error(err)
-	}
+	bag, _ := setupTestBag()
 	defer os.RemoveAll(bag.Path())
 
 	// It should produce no errors
@@ -160,14 +155,7 @@ func TestAddDir(t *testing.T) {
 func TestManifest(t *testing.T) {
 
 	// Setup the test bag
-	algo := "sha1"
-	hsh, _ := bagutil.LookupHashFunc(algo)
-	cs := bagutil.NewChecksumAlgorithm(algo, hsh)
-
-	bag, err := bagins.NewBag(os.TempDir(), "_GOTESTBAG_", cs)
-	if err != nil {
-		t.Error(err)
-	}
+	bag, _ := setupTestBag()
 	defer os.RemoveAll(bag.Path())
 
 	// It should have the expected name and return no error.
@@ -179,4 +167,9 @@ func TestManifest(t *testing.T) {
 	if filepath.Base(mf.Name()) != exp {
 		t.Error("Expected manifest name", exp, "but returned", filepath.Base(mf.Name()))
 	}
+}
+
+func TestAddTagFile(t *testing.T) {
+
+	// Setup the test bag
 }
