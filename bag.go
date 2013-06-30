@@ -1,7 +1,5 @@
 /*
-Methods for managing tag files inside of bags.  These represent the standard
-tag files that are part of every Bag spec or optional tag files which can
-be used liberally throughout the bag itself.
+
 
 For more information on Bag tagfiles see
 http://tools.ietf.org/html/draft-kunze-bagit-09#section-2.3
@@ -43,12 +41,14 @@ func NewBag(location string, name string, cs *bagutil.ChecksumAlgorithm) (*Bag, 
 	bag.cs = cs
 	bag.manifests = make(map[string]*Manifest)
 
-	if err = bag.AddManifest(cs.Name()); err != nil {
+	// Init the manifests map and create the root manifest
+	mf, err := NewManifest(bag.Path(), cs)
+	if err != nil {
 		return nil, err
 	}
-	bag.tagfiles = make(map[string]*TagFile)
+	bag.manifests[cs.Name()] = mf
 
-	// Make the payload directory and such.
+	// Init the payload directory and such.
 	plPath := filepath.Join(bag.Path(), "data")
 	err = os.Mkdir(plPath, 0755)
 	if err != nil {
@@ -59,7 +59,8 @@ func NewBag(location string, name string, cs *bagutil.ChecksumAlgorithm) (*Bag, 
 		return nil, err
 	}
 
-	// Create the BagIt.txt Tagfile
+	// Init tagfiles map and create the BagIt.txt Tagfile
+	bag.tagfiles = make(map[string]*TagFile)
 	tf, err := bag.createBagItFile()
 	if err != nil {
 		return nil, err
@@ -84,7 +85,7 @@ func (b *Bag) createBagItFile() (*TagFile, error) {
 	return bagit, nil
 }
 
-// METHODS FOR MANAGING BAG PAYLOAD
+// METHODS FOR MANAGING BAG PAYLOADS
 
 // Adds a file to the bag payload and adds the generated checksum to the
 // manifest.
@@ -115,36 +116,11 @@ func (b *Bag) AddDir(src string) (errs []error) {
 
 // METHODS FOR MANAGING BAG MANIFESTS
 
-func (b *Bag) AddManifest(algo string) error {
-	hsh, err := bagutil.LookupHashFunc(algo)
-	if err != nil {
-		return err
-	}
-	cs := bagutil.NewChecksumAlgorithm(algo, hsh)
-	if err != nil {
-		return err
-	}
-	mf, err := NewManifest(b.Path(), cs)
-	if err != nil {
-		return err
-	}
-	b.manifests[algo] = mf
-	return nil
-}
-
-func (b *Bag) ManifestFile(algo string) (*Manifest, error) {
-	if mf, ok := b.manifests[algo]; ok {
+func (b *Bag) Manifest() (*Manifest, error) {
+	if mf, ok := b.manifests[b.cs.Name()]; ok {
 		return mf, nil
 	}
-	return nil, fmt.Errorf("Unable to find manifest-%s.txt", algo)
-}
-
-func (b *Bag) Manifest() (*Manifest, error) {
-	mf, err := b.ManifestFile(b.cs.Name())
-	if err != nil {
-		return nil, err
-	}
-	return mf, nil
+	return nil, fmt.Errorf("Unable to find manifest-%s.txt", b.cs.Name())
 }
 
 // METHODS FOR MANAGING BAG TAG FILES
@@ -189,15 +165,10 @@ func (b *Bag) Path() string {
 func (b *Bag) Close() (errs []error) {
 
 	// Write all the manifest files.
-	for key := range b.manifests {
-		if mf, err := b.ManifestFile(key); err != nil {
+	for _, mf := range b.manifests {
+		if err := mf.Create(); err != nil {
 			errs = append(errs, err)
-		} else {
-			if err = mf.Create(); err != nil {
-				errs = append(errs, err)
-			}
 		}
-
 	}
 
 	// TODO Write all the tag files.
