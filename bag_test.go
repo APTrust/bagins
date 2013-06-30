@@ -46,14 +46,15 @@ func TestNewBag(t *testing.T) {
 	}
 
 	// It should create a bag without any errors.
+	bagName := "_GOTEST_NEWBAG_"
 	bag, err := setupTestBag("_GOTEST_NEWBAG_")
 	defer os.RemoveAll(bag.Path())
 
 	// It should find all of the following files and directories.
-	if _, err = os.Stat(filepath.Join(os.TempDir(), "_GOTESTBAG_")); os.IsNotExist(err) {
+	if _, err = os.Stat(filepath.Join(os.TempDir(), bagName)); os.IsNotExist(err) {
 		t.Error("Bag directory does not exist!")
 	}
-	if data, err := os.Stat(filepath.Join(os.TempDir(), "_GOTESTBAG_", "data")); os.IsNotExist(err) || !data.IsDir() {
+	if data, err := os.Stat(filepath.Join(os.TempDir(), bagName, "data")); os.IsNotExist(err) || !data.IsDir() {
 		t.Error("Data directory does not exist or is not a directory!")
 	}
 	if _, err = os.Stat(filepath.Join(bag.Path(), "bagit.txt")); os.IsNotExist(err) {
@@ -63,7 +64,7 @@ func TestNewBag(t *testing.T) {
 		}
 		t.Errorf("bagit.txt does not exist! %s", bi.Name())
 	}
-	if _, err = os.Stat(filepath.Join(os.TempDir(), "_GOTESTBAG_", "manifest-sha1.txt")); os.IsNotExist(err) {
+	if _, err = os.Stat(filepath.Join(os.TempDir(), bagName, "manifest-sha1.txt")); os.IsNotExist(err) {
 		t.Error("manifest-sha1.txt does not exist!")
 	}
 }
