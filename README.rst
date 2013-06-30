@@ -11,6 +11,8 @@ enviorment.
 I'm fairly new to the Go Language so excuse the prototype nature of the code
 in general.
 
+**GoDocs For This Project:** http://godoc.org/github.com/APTrust/bagins
+
 Installation
 ------------
 
@@ -20,6 +22,29 @@ This package is "go get-able" so simply import the package via
  command directly as follows::
 
 	go get github.com/APTrust/bagins
+
+Modifying The Code
+------------------
+
+To keep this project "go get-able" you will need to create the top level
+directories under your go source directory and then checkout the code into
+it like so::
+
+Switch to your Go source directory:
+
+	cd $GOPATH/src
+
+Create the parent directories:
+
+	mkdir -p github.com/APTrust
+
+Switch to the directory you just created:
+
+	cd github.com/APTrust
+
+Checkout the source code via git:
+
+	git clone https://github.com/APTrust/bagins.git
 	
 Usage
 -----
