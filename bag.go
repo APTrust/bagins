@@ -126,11 +126,19 @@ func (b *Bag) Manifest() (*Manifest, error) {
 // METHODS FOR MANAGING BAG TAG FILES
 
 func (b *Bag) AddTagfile(name string) error {
-	tf, err := NewTagFile(filepath.Join(b.Path(), name))
-	if tf != nil {
-		b.tagfiles[name] = tf
+	tagPath := filepath.Join(b.Path(), name)
+	if err := os.MkdirAll(filepath.Dir(tagPath), 0766); err != nil {
+		return err
 	}
-	return err
+	tf, err := NewTagFile(tagPath)
+	if err != nil {
+		return err
+	}
+	b.tagfiles[name] = tf
+	if err := tf.Create(); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (b *Bag) TagFile(name string) (*TagFile, error) {
@@ -163,7 +171,6 @@ func (b *Bag) Path() string {
 // This method writes all the relevant tag and manifest files to finish off the
 // bag.
 func (b *Bag) Close() (errs []error) {
-
 	// Write all the manifest files.
 	for _, mf := range b.manifests {
 		if err := mf.Create(); err != nil {
@@ -172,13 +179,12 @@ func (b *Bag) Close() (errs []error) {
 	}
 
 	// TODO Write all the tag files.
-	for key := range b.tagfiles {
-		if tf, err := b.TagFile(key); err != nil {
+	for _, tf := range b.tagfiles {
+		if err := os.MkdirAll(filepath.Dir(tf.Name()), 0766); err != nil {
 			errs = append(errs, err)
-		} else {
-			if err = tf.Create(); err != nil {
-				errs = append(errs, err)
-			}
+		}
+		if err := tf.Create(); err != nil {
+			errs = append(errs, err)
 		}
 	}
 	return

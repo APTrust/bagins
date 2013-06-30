@@ -10,12 +10,12 @@ import (
 	"testing"
 )
 
-func setupTestBag() (*bagins.Bag, error) {
+func setupTestBag(bagName string) (*bagins.Bag, error) {
 	algo := "sha1"
 	hsh, _ := bagutil.LookupHashFunc(algo)
 	cs := bagutil.NewChecksumAlgorithm(algo, hsh)
 
-	bag, err := bagins.NewBag(os.TempDir(), "_GOTESTBAG_", cs)
+	bag, err := bagins.NewBag(os.TempDir(), bagName, cs)
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +46,7 @@ func TestNewBag(t *testing.T) {
 	}
 
 	// It should create a bag without any errors.
-	bag, err := setupTestBag()
+	bag, err := setupTestBag("_GOTEST_NEWBAG_")
 	defer os.RemoveAll(bag.Path())
 
 	// It should find all of the following files and directories.
@@ -77,7 +77,7 @@ func TestAddFile(t *testing.T) {
 	defer os.Remove(fi.Name())
 
 	// Setup the Test Bag
-	bag, _ := setupTestBag()
+	bag, _ := setupTestBag("_GOTEST_ADDFILE_")
 	defer os.RemoveAll(bag.Path())
 
 	// It should return an error when trying to add a file that doesn't exist.
@@ -121,7 +121,7 @@ func TestAddDir(t *testing.T) {
 	defer os.RemoveAll(srcDir)
 
 	// Setup the test bag
-	bag, _ := setupTestBag()
+	bag, _ := setupTestBag("_GOTEST_ADDDIR_")
 	defer os.RemoveAll(bag.Path())
 
 	// It should produce no errors
@@ -155,7 +155,7 @@ func TestAddDir(t *testing.T) {
 func TestManifest(t *testing.T) {
 
 	// Setup the test bag
-	bag, _ := setupTestBag()
+	bag, _ := setupTestBag("_GOTEST_MANIFEST_")
 	defer os.RemoveAll(bag.Path())
 
 	// It should have the expected name and return no error.
@@ -172,4 +172,31 @@ func TestManifest(t *testing.T) {
 func TestAddTagFile(t *testing.T) {
 
 	// Setup the test bag
+	bag, err := setupTestBag("_GOTEST_ADDTAGFILE_")
+	if err != nil {
+		t.Error("Test bag already exists, remove to continue testing.")
+	}
+	defer os.RemoveAll(bag.Path())
+
+	// It should throw an error when a bag tagfilename is passed.
+	badTagName := "customtag/directory/tag"
+	if err := bag.AddTagfile(badTagName); err == nil {
+		t.Error("Did not generate an error when trying to add bag tagname:", badTagName)
+	}
+
+	// It should not throw an error.
+	newTagName := "customtag/directory/tag.txt"
+	if err := bag.AddTagfile(newTagName); err != nil {
+		t.Error(err)
+	}
+
+	// It should be able to lookup the tagfile by name.
+	if _, err := bag.TagFile(newTagName); err != nil {
+		t.Error(err)
+	}
+
+	// It should find the file inside the bag.
+	if _, err := os.Stat(filepath.Join(bag.Path(), newTagName)); err != nil {
+		t.Error(err)
+	}
 }
