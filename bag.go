@@ -133,6 +133,13 @@ func (b *Bag) AddTagfile(name string) error {
 	return err
 }
 
+func (b *Bag) TagFile(name string) (*TagFile, error) {
+	if tf, ok := b.tagfiles[name]; ok {
+		return tf, nil
+	}
+	return nil, fmt.Errorf("Unable to find tagfile %s", name)
+}
+
 // Returns the data fields for the baginfo.txt tag file in key, value pairs.
 func (b *Bag) BagInfo() (*TagFile, error) {
 	tf, err := b.TagFile("bag-info.txt")
@@ -140,13 +147,6 @@ func (b *Bag) BagInfo() (*TagFile, error) {
 		return nil, err
 	}
 	return tf, nil
-}
-
-func (b *Bag) TagFile(name string) (*TagFile, error) {
-	if tf, ok := b.tagfiles[name]; ok {
-		return tf, nil
-	}
-	return nil, fmt.Errorf("Unable to find tagfile %s", name)
 }
 
 // TODO create methods for managing fetch file.

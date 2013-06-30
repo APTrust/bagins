@@ -156,3 +156,27 @@ func TestAddDir(t *testing.T) {
 		}
 	}
 }
+
+func TestManifest(t *testing.T) {
+
+	// Setup the test bag
+	algo := "sha1"
+	hsh, _ := bagutil.LookupHashFunc(algo)
+	cs := bagutil.NewChecksumAlgorithm(algo, hsh)
+
+	bag, err := bagins.NewBag(os.TempDir(), "_GOTESTBAG_", cs)
+	if err != nil {
+		t.Error(err)
+	}
+	defer os.RemoveAll(bag.Path())
+
+	// It should have the expected name and return no error.
+	mf, err := bag.Manifest()
+	if err != nil {
+		t.Error(err)
+	}
+	exp := "manifest-sha1.txt"
+	if filepath.Base(mf.Name()) != exp {
+		t.Error("Expected manifest name", exp, "but returned", filepath.Base(mf.Name()))
+	}
+}
