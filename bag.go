@@ -13,7 +13,7 @@ import (
 	"path/filepath"
 )
 
-// Basic type referencing main elements of a bag.
+// Represents the basic structure of a bag which is controlled by methods.
 type Bag struct {
 	pth       string // the bag is under.
 	payload   *Payload
@@ -24,8 +24,14 @@ type Bag struct {
 
 // METHODS FOR CREATING AND INITALIZING BAGS
 
-// Creates a new bag in the provided location and name.  Returns an error
-// if the location does not exist or if the bag does already exist.
+// Creates a new bag under the location directory and creates a bag root directory
+// with the provided name.  Returns an error if the location does not exist or if the
+// bag already exist.
+//
+// example:
+//		hsh, _ := bagutil.LookupHashFunc("sha256")
+//		cs := bagutil.NewChecksumAlgorithm(algo, hsh)
+// 		NewBag("archive/bags", "bag-34323", cs)
 func NewBag(location string, name string, cs *bagutil.ChecksumAlgorithm) (*Bag, error) {
 	// Start with creating the directories.
 	bagPath := filepath.Join(location, name)
@@ -116,6 +122,8 @@ func (b *Bag) AddDir(src string) (errs []error) {
 
 // METHODS FOR MANAGING BAG MANIFESTS
 
+// Returns the default manifest of the bag as determined by its
+// checksum algorithm.
 func (b *Bag) Manifest() (*Manifest, error) {
 	if mf, ok := b.manifests[b.cs.Name()]; ok {
 		return mf, nil
@@ -125,6 +133,8 @@ func (b *Bag) Manifest() (*Manifest, error) {
 
 // METHODS FOR MANAGING BAG TAG FILES
 
+// Adds a tagfile to the bag, creating whatever subdirectories are needed
+// as indicated by the filename.
 func (b *Bag) AddTagfile(name string) error {
 	tagPath := filepath.Join(b.Path(), name)
 	if err := os.MkdirAll(filepath.Dir(tagPath), 0766); err != nil {
@@ -141,6 +151,7 @@ func (b *Bag) AddTagfile(name string) error {
 	return nil
 }
 
+// Finds a tagfile in by it's relative path to the bag root directory.
 func (b *Bag) TagFile(name string) (*TagFile, error) {
 	if tf, ok := b.tagfiles[name]; ok {
 		return tf, nil
