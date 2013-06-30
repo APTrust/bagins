@@ -240,3 +240,53 @@ func TestPath(t *testing.T) {
 		t.Error("Excpected", bag.Path(), "and", expPath, "to be equal!")
 	}
 }
+
+func TestClose(t *testing.T) {
+	// Setup test bag
+	bag, _ := setupTestBag("_GOTEST_BAG_CLOSE_")
+	defer os.RemoveAll(bag.Path())
+
+	// Add some data to the manifest and make sure it writes it on close.
+	mf, _ := bag.Manifest()
+	mf.Data["data/fakefile.txt"] = "da909ba395016f2a64b04d706520db6afa74fc95"
+
+	// It should not throw an error.
+	if errs := bag.Close(); len(errs) != 0 {
+		for idx := range errs {
+			t.Error(errs[idx])
+		}
+	}
+
+	// The manifest file should contain data.
+	content, err := ioutil.ReadFile(mf.Name())
+	if err != nil {
+		t.Error(err)
+	}
+	exp := 59 // Length of values entered above and newline.
+	if len(content) != 59 {
+		t.Error("Expected ", exp, "but found", len(content), "characters written")
+	}
+
+	// Add some tagfile data to make sure it writes it on close.
+	tfName := "extratagfile.txt"
+	bag.AddTagfile("extratagfile.txt")
+	tf, _ := bag.TagFile(tfName)
+	tf.Data["MyNewField"] = "This is testdata."
+
+	// it should not throw an error.
+	if errs := bag.Close(); len(errs) != 0 {
+		for idx := range errs {
+			t.Error(errs[idx])
+		}
+	}
+
+	// The TagFile should contain data.
+	content, err = ioutil.ReadFile(tf.Name())
+	if err != nil {
+		t.Error(err)
+	}
+	exp = 10 // Some length the string needs to be abovel
+	if len(content) < exp {
+		t.Error("Didn't find data in tagfile", tfName, "as expected!")
+	}
+}
