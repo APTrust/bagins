@@ -172,10 +172,7 @@ func TestManifest(t *testing.T) {
 func TestAddTagFile(t *testing.T) {
 
 	// Setup the test bag
-	bag, err := setupTestBag("_GOTEST_ADDTAGFILE_")
-	if err != nil {
-		t.Error("Test bag already exists, remove to continue testing.")
-	}
+	bag, _ := setupTestBag("_GOTEST_ADDTAGFILE_")
 	defer os.RemoveAll(bag.Path())
 
 	// It should throw an error when a bag tagfilename is passed.
@@ -195,8 +192,39 @@ func TestAddTagFile(t *testing.T) {
 		t.Error(err)
 	}
 
+	// Even tagfiles passed as root should be put under the bag.
+	oddTagName := "/lookslikeroot/directory/tag.txt"
+	if err := bag.AddTagfile(oddTagName); err != nil {
+		t.Error(err)
+	}
+
+	// It should be able to lookup the tagfile by name.
+	if _, err := bag.TagFile(oddTagName); err != nil {
+		t.Error(err)
+	}
+
 	// It should find the file inside the bag.
 	if _, err := os.Stat(filepath.Join(bag.Path(), newTagName)); err != nil {
 		t.Error(err)
+	}
+}
+
+func TestTagFile(t *testing.T) {
+
+	// Setup the test bag
+	bag, _ := setupTestBag("_GOTEST_TAGFILE_")
+	defer os.RemoveAll(bag.Path())
+
+	// It should find the tag file by name
+	testTagName := "new/tag.txt"
+	bag.AddTagfile(testTagName)
+	if _, err := bag.TagFile(testTagName); err != nil {
+		t.Error(err)
+	}
+
+	// It should return an error if asking for a bad tag name.
+	badTagName := "/new/tag.txt"
+	if _, err := bag.TagFile(badTagName); err == nil {
+		t.Error("Bag.TagFile returned results for", badTagName, "when it should not exist.")
 	}
 }
