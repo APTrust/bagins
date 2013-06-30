@@ -77,7 +77,7 @@ func TestAddFile(t *testing.T) {
 	defer os.Remove(fi.Name())
 
 	// Setup the Test Bag
-	bag, _ := setupTestBag("_GOTEST_ADDFILE_")
+	bag, _ := setupTestBag("_GOTEST_BAG_ADDFILE_")
 	defer os.RemoveAll(bag.Path())
 
 	// It should return an error when trying to add a file that doesn't exist.
@@ -121,7 +121,7 @@ func TestAddDir(t *testing.T) {
 	defer os.RemoveAll(srcDir)
 
 	// Setup the test bag
-	bag, _ := setupTestBag("_GOTEST_ADDDIR_")
+	bag, _ := setupTestBag("_GOTEST_BAG_ADDDIR_")
 	defer os.RemoveAll(bag.Path())
 
 	// It should produce no errors
@@ -155,7 +155,7 @@ func TestAddDir(t *testing.T) {
 func TestManifest(t *testing.T) {
 
 	// Setup the test bag
-	bag, _ := setupTestBag("_GOTEST_MANIFEST_")
+	bag, _ := setupTestBag("_GOTEST_BAG_MANIFEST_")
 	defer os.RemoveAll(bag.Path())
 
 	// It should have the expected name and return no error.
@@ -172,7 +172,7 @@ func TestManifest(t *testing.T) {
 func TestAddTagFile(t *testing.T) {
 
 	// Setup the test bag
-	bag, _ := setupTestBag("_GOTEST_ADDTAGFILE_")
+	bag, _ := setupTestBag("_GOTEST_BAG_ADDTAGFILE_")
 	defer os.RemoveAll(bag.Path())
 
 	// It should throw an error when a bag tagfilename is passed.
@@ -212,7 +212,7 @@ func TestAddTagFile(t *testing.T) {
 func TestTagFile(t *testing.T) {
 
 	// Setup the test bag
-	bag, _ := setupTestBag("_GOTEST_TAGFILE_")
+	bag, _ := setupTestBag("_GOTEST_BAG_TAGFILE_")
 	defer os.RemoveAll(bag.Path())
 
 	// It should find the tag file by name
@@ -226,5 +226,17 @@ func TestTagFile(t *testing.T) {
 	badTagName := "/new/tag.txt"
 	if _, err := bag.TagFile(badTagName); err == nil {
 		t.Error("Bag.TagFile returned results for", badTagName, "when it should not exist.")
+	}
+}
+
+func TestPath(t *testing.T) {
+	// Stup the test bag
+	bagName := "_GOTEST_BAG_PATH_"
+	bag, _ := setupTestBag(bagName)
+	defer os.RemoveAll(bag.Path())
+
+	expPath := filepath.Join(os.TempDir(), bagName)
+	if bag.Path() != expPath {
+		t.Error("Excpected", bag.Path(), "and", expPath, "to be equal!")
 	}
 }
