@@ -1,5 +1,11 @@
-// Main package to running BagIns from the commandline.
 package main
+
+//
+//
+// This application can be compiled and deployed as a stand alone executable to
+// create very basic bags from the commandline.
+//
+//
 
 import (
 	"flag"
@@ -25,17 +31,23 @@ func init() {
 }
 
 func usage() {
-	fmt.Println(`
-Usage:
-	go run baging.go -dir <value> -name <value> -payload <value> [-algo <value>]
+
+	usage := `Usage:
+	./bagmaker -dir <value> -name <value> -payload <value> [-algo <value>]
 
 Flags:
-		`)
-	printFlags := func(a *flag.Flag) {
-		fmt.Println("	-"+a.Name+" <value>", a.Usage)
-	}
 
-	flag.VisitAll(printFlags)
+	-algo <value> Checksum algorithm to use.  md5, sha1, sha224, sha256, 
+	              sha512, or sha384. Defaults to md5.
+
+	-dir <value> Directory to create the bag.
+
+	-name <value> Name for the bag root directory.
+
+	-payload <value> Directory of files to parse into the bag.
+
+`
+	fmt.Println(usage)
 }
 
 func main() {
@@ -64,8 +76,8 @@ func main() {
 		return
 	}
 	errs := bag.AddDir(payload)
-	for err := range errs {
-		fmt.Println("AddDir Error:", err)
+	for idx := range errs {
+		fmt.Println("AddDir Error:", errs[idx])
 		return
 	}
 	bag.Close()

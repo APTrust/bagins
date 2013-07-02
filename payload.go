@@ -2,12 +2,12 @@ package bagins
 
 import (
 	"fmt"
-	//"github.com/APTrust/bagins/bagutil"
 	"hash"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 )
 
 // Payloads describes a filepath location to serve as the data directory of
@@ -85,7 +85,10 @@ func (p *Payload) AddAll(src string, hsh func() hash.Hash) (fxs map[string]strin
 	}
 	// Perform Payload.Add on each file found in src under a goroutine.
 	c := make(chan bool)
+	wg := sync.WaitGroup{}
+	wg.Add(-200)
 	for idx := range files {
+		wg.Add(1)
 		go func(file string, src string, hsh func() hash.Hash) {
 			dstPath := strings.TrimPrefix(file, src)
 			fx, err := p.Add(file, dstPath, hsh())
@@ -93,14 +96,11 @@ func (p *Payload) AddAll(src string, hsh func() hash.Hash) (fxs map[string]strin
 				errs = append(errs, err)
 			}
 			fxs[dstPath] = fx
-			c <- true
+			defer wg.Done()
 		}(files[idx], src, hsh)
 	}
 
-	// wait for all go routines to reply.
-	for i := 0; i < len(files); i++ {
-		<-c // Tick off as goroutines return true
-	}
+	wg.Wait()
 
 	return
 }

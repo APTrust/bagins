@@ -72,7 +72,11 @@ Usage:
 
 Flags:
 
-	-algo <value> Checksum algorithm to use.  md5, sha1, sha224, sha256, sha512, sha384
+	-algo <value> Checksum algorithm to use.  md5, sha1, sha224, sha256, 
+	              sha512, or sha384.
+
 	-dir <value> Directory to create the bag.
+
 	-name <value> Name for the bag root directory.
+
 	-payload <value> Directory of files to parse into the bag
