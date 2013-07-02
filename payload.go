@@ -84,10 +84,10 @@ func (p *Payload) AddAll(src string, hsh func() hash.Hash) (fxs map[string]strin
 		errs = append(errs, err)
 	}
 	// Perform Payload.Add on each file found in src under a goroutine.
-	c := make(chan bool)
+	queue := make(chan bool, 200)
 	wg := sync.WaitGroup{}
-	wg.Add(-200)
 	for idx := range files {
+		queue <- true
 		wg.Add(1)
 		go func(file string, src string, hsh func() hash.Hash) {
 			dstPath := strings.TrimPrefix(file, src)
@@ -96,7 +96,8 @@ func (p *Payload) AddAll(src string, hsh func() hash.Hash) (fxs map[string]strin
 				errs = append(errs, err)
 			}
 			fxs[dstPath] = fx
-			defer wg.Done()
+			<-queue
+			wg.Done()
 		}(files[idx], src, hsh)
 	}
 
