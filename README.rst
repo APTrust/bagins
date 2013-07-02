@@ -53,3 +53,26 @@ The Library is still under development, there is basic code for formatting
 and writing Manifest and Tag files as well as utilities for file
 checksumming files.  Soon I'll tie it all together with a basic bag
 creation code.  I'll post examples of it here when complete.
+
+Command Line Executable
+-----------------------
+
+This library includes a command line executable in the 
+github.com/APtrust/bagins/bagmaker
+
+Assuming you have checked out the code to your GOPATH, to build and compile this
+just execute::
+
+	>go install $GOPATH/src/github.com/APTrust/bagins/bagmaker
+
+If you have GOBIN set this will deposite a compile file called *bagmaker* into your GOBIN directory.
+
+Usage:
+	./bagmaker -dir <value> -name <value> -payload <value> [-algo <value>]
+
+Flags:
+
+	-algo <value> Checksum algorithm to use.  md5, sha1, sha224, sha256, sha512, sha384
+	-dir <value> Directory to create the bag.
+	-name <value> Name for the bag root directory.
+	-payload <value> Directory of files to parse into the bag
