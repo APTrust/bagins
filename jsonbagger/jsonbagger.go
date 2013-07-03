@@ -1,11 +1,12 @@
 package jsonbagger
 
 import (
+	"errors"
+	"fmt"
 	"github.com/APTrust/bagins"
 	"github.com/APTrust/bagins/bagutil"
+	"log"
 	"path/filepath"
-	"fmt"
-	"strings"
 )
 
 type TargetInfo struct {
@@ -17,7 +18,7 @@ type BagArgs struct {
 	Name     string
 	Algo     string
 	Targets  *TargetInfo
-	TagFiles map[string]map[string] // filename:  field: value, field: value
+	TagFiles map[string]map[string]string
 }
 
 // Object to register with JSON RPC server for bag creation.
@@ -25,9 +26,15 @@ type JSONBagger struct {
 	dir string // directory to create bags in.
 }
 
+func NewJSONBagger(dir string) *JSONBagger {
+	jb := new(JSONBagger)
+	jb.dir = dir
+	return jb
+}
+
 func (jb *JSONBagger) Create(ba *BagArgs, result *string) error {
 
-	bag_errs := []error
+	bag_errs := []error{}
 
 	// Setup the checksum algorithm.
 	cs, err := bagutil.NewCheckByName(ba.Algo)
@@ -42,22 +49,20 @@ func (jb *JSONBagger) Create(ba *BagArgs, result *string) error {
 	}
 
 	// Write the tag files and field values.
-	for tagpath, fields := range ba.TagFiles {
-		tf, err := bag.AddTagfile(tagpath)
+	for tagpath, fieldMap := range ba.TagFiles {
+		err := bag.AddTagfile(tagpath)
 		if err != nil {
 			return err
 		}
-		for key, value := range fields {
+		tf, _ := bag.TagFile(tagpath)
+		for key, value := range fieldMap {
 			tf.Data[key] = value
 		}
 	}
 
 	// Process the target files.
 	for _, dir := range ba.Targets.Dirs {
-		errs := bag.AddDir(dir)
-		if len(errs) > 0 {
-			bag_errs = append(bag_errs, errs)
-		}
+		copy(bag_errs, bag.AddDir(dir))
 	}
 	for _, fPath := range ba.Targets.Files {
 		err := bag.AddFile(fPath, filepath.Base(fPath))
@@ -65,11 +70,16 @@ func (jb *JSONBagger) Create(ba *BagArgs, result *string) error {
 			bag_errs = append(bag_errs, err)
 		}
 	}
-	feedback := []string{fmt.Sprint("Bag Created:", bag.Path())}
-	if len(bag_errs) > 0 {
-		feedback = append(feedback, "Errors Reported:")
-		feedback = append(feedback, bag_errs)
+	if err := bag.Close(); err != nil {
+		log.Println(err)
 	}
-	result = strings.Join(feedback, "\n")
+	*result = fmt.Sprint("Bag Created:", bag.Path())
+
+	if len(bag_errs) > 0 {
+		for _, err := range bag_errs {
+			log.Println(err)
+		}
+		return errors.New("Errors encountered when creating bag, see the log for information.")
+	}
 	return nil
 }
