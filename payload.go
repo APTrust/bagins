@@ -39,7 +39,7 @@ func (p *Payload) Add(srcPath string, dstPath string, hsh hash.Hash) (string, er
 	if err != nil {
 		return "", err
 	}
-	defer src.Close()
+	// defer src.Close()
 
 	// TODO simplify this! returns on windows paths are messing with me so I'm
 	// going through this step wise.
@@ -52,7 +52,7 @@ func (p *Payload) Add(srcPath string, dstPath string, hsh hash.Hash) (string, er
 	if err != nil {
 		return "", err
 	}
-	defer dst.Close()
+	//defer dst.Close()
 
 	wrtr := io.MultiWriter(dst, hsh)
 
@@ -61,6 +61,8 @@ func (p *Payload) Add(srcPath string, dstPath string, hsh hash.Hash) (string, er
 		return "", err
 	}
 	chkSum := fmt.Sprintf("%x", hsh.Sum(nil))
+	src.Close()
+	dst.Close()
 	return chkSum, err
 }
 
@@ -84,7 +86,7 @@ func (p *Payload) AddAll(src string, hsh func() hash.Hash) (fxs map[string]strin
 		errs = append(errs, err)
 	}
 	// Perform Payload.Add on each file found in src under a goroutine.
-	queue := make(chan bool, 200)
+	queue := make(chan bool, 100)
 	wg := sync.WaitGroup{}
 	for idx := range files {
 		queue <- true
