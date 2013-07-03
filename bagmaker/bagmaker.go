@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"github.com/APTrust/bagins"
 	"github.com/APTrust/bagins/bagutil"
+	"time"
 )
 
 var (
@@ -65,6 +66,7 @@ func main() {
 		return
 	}
 
+	begin := time.Now()
 	cs, err := bagutil.NewCheckByName(algo)
 	if err != nil {
 		fmt.Println("Unable to find checksum", algo)
@@ -81,6 +83,7 @@ func main() {
 		return
 	}
 	bag.Close()
-	fmt.Println("Done!")
+	elapsed := time.Since(begin)
+	fmt.Println("END: elapsed in", elapsed.Seconds(), "seconds.")
 	return
 }

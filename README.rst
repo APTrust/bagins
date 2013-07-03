@@ -57,15 +57,16 @@ creation code.  I'll post examples of it here when complete.
 Command Line Executable
 -----------------------
 
-This library includes a command line executable in the 
+This library includes a command line executable in the directory
 github.com/APtrust/bagins/bagmaker
 
 Assuming you have checked out the code to your GOPATH, to build and compile this
 just execute::
 
-	>go install $GOPATH/src/github.com/APTrust/bagins/bagmaker
+	>go install $GOPATH/src/github.com/APTrust/bagins/bagmaker/bagmaker.go
 
-If you have GOBIN set this will deposite a compile file called *bagmaker* into your GOBIN directory.
+If you have GOBIN set this will deposite a compile file called *bagmaker* into 
+your GOBIN directory.
 
 Usage:
 	./bagmaker -dir <value> -name <value> -payload <value> [-algo <value>]
