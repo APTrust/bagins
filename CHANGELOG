@@ -9,3 +9,8 @@ CHANGELOG
 ------
 
 * Can compile a command line executable basic bagger.  See README.rst for info
+
+0.6.1
+-----
+
+* bagmaker runs with throttles go routines to avoid a too many open files error.
