@@ -11,14 +11,15 @@ import (
 	"github.com/APTrust/bagins/bagutil"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // Represents the basic structure of a bag which is controlled by methods.
 type Bag struct {
 	pth       string // the bag is under.
 	payload   *Payload
-	manifests map[string]*Manifest
-	tagfiles  map[string]*TagFile
+	manifests map[string]*Manifest // Algo string as key.
+	tagfiles  map[string]*TagFile  // relative path to bag as key,
 	cs        *bagutil.ChecksumAlgorithm
 }
 
@@ -71,7 +72,7 @@ func NewBag(location string, name string, cs *bagutil.ChecksumAlgorithm) (*Bag, 
 	if err != nil {
 		return nil, err
 	}
-	bag.tagfiles["bagit"] = tf
+	bag.tagfiles["bagit.txt"] = tf
 
 	return bag, nil
 }
@@ -201,9 +202,71 @@ func (b *Bag) Close() (errs []error) {
 	return
 }
 
-// TODO create a method to return the name of the bag root folder alone as the
-// bag name
+// Method looks to confirm that all the expected files are present in the bag.  Note
+// this DOES NOT validate the bag or check the data values are accurate.  It
+// only confirms the expected file structure.
+func (b *Bag) Inventory() error {
+	// Confirm Tagfiles are there.
 
-// TODO create method to return a list of tag files.
+	for fPath, _ := range b.tagfiles {
+		if _, err := os.Stat(filepath.Join(b.Path(), fPath)); os.IsNotExist(err) {
+			return fmt.Errorf("Tagfile not found: %s", fPath)
+		}
+	}
+	// Confirm Payload files are there.
+	mf, _ := b.Manifest()
+	for fPath, _ := range mf.Data {
+		if _, err := os.Stat(filepath.Join(b.Path(), fPath)); os.IsNotExist(err) {
+			return fmt.Errorf("Payload file not found: %s", fPath)
+		}
+	}
+	// Confirm Manifest files are there.
+	for _, mf := range b.manifests {
+		fPath := filepath.Base(mf.Name())
+		if _, err := os.Stat(filepath.Join(b.Path(), fPath)); os.IsNotExist(err) {
+			return fmt.Errorf("Manifest file not found: %s", fPath)
+		}
+	}
 
-// TODO create a method to return a list of manifest files.
+	return nil
+}
+
+// Method looks to find any items inside the bag that are not accounted for in one of
+// as part of the tags, manifests or in the payload list.
+func (b *Bag) Orphans() error {
+	fList := make(map[string]bool)
+
+	// Tag files
+	for fPath, _ := range b.tagfiles {
+		fList[fPath] = true
+	}
+
+	// Manifest Payload
+	mf, _ := b.Manifest()
+	for fPath, _ := range mf.Data {
+		fList[fPath] = true
+	}
+
+	// Manifest Files
+	for _, mf := range b.manifests {
+		fPath := filepath.Base(mf.Name())
+		fList[fPath] = true
+	}
+
+	// WalkDir function to collect files in the bag..
+	visit := func(pth string, info os.FileInfo, err error) error {
+		if !info.IsDir() {
+			relPath := strings.TrimPrefix(pth, b.Path())
+			if _, ok := fList[relPath]; ok {
+				return nil
+			}
+			return fmt.Errorf("Orphaned file inside of bag: %s", relPath)
+		}
+		return err
+	}
+	if err := filepath.Walk(b.Path(), visit); err != nil {
+		return err
+	}
+
+	return nil
+}

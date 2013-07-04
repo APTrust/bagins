@@ -291,3 +291,76 @@ func TestClose(t *testing.T) {
 		t.Error("Didn't find data in tagfile", tfName, "as expected!")
 	}
 }
+
+func TestInventory(t *testing.T) {
+
+	// Setup the test file to add for the test.
+	fi, _ := ioutil.TempFile("", "TEST_GO_ADDFILE_")
+	fi.WriteString("Test the checksum")
+	fi.Close()
+	defer os.Remove(fi.Name())
+
+	// Setup the Test Bag
+	bag, _ := setupTestBag("_GOTEST_BAG_ADDFILE_")
+	defer os.RemoveAll(bag.Path())
+
+	// It should not throw an error.
+	if err := bag.Inventory(); err != nil {
+		t.Error("Initial Bag Creation:", err)
+	}
+
+	// It should not throw an error for an added tag file.
+	fn := "test_tagfile.txt"
+	bag.AddTagfile(fn)
+	if err := bag.Inventory(); err != nil {
+		t.Error(err)
+	}
+
+	// It should thrown an error if tagfile is remove.
+	os.Remove(filepath.Join(bag.Path(), fn))
+	if err := bag.Inventory(); err == nil {
+		t.Error("Does not detect when a tag file has been deleted!")
+	}
+	bag.Close() // rewrites and tagfile.
+
+	// setup a bag manifest entry.
+	mf, _ := bag.Manifest()
+	pfName := filepath.Join("data", filepath.Base(fi.Name()))
+	mf.Data[pfName] = ""
+
+	// It should throw an error when unable to find manifest entry.
+	if err := bag.Inventory(); err == nil {
+		t.Error("Not detecting a missiong file in the payload:")
+	}
+
+	// It should not throw an error when the file is actually added.
+	err := bag.AddFile(fi.Name(), filepath.Base(fi.Name()))
+	if err != nil {
+		t.Error(err)
+	}
+	bag.Close()
+
+	if err := bag.Inventory(); err != nil {
+		t.Error("Incorrectly reads a payload file as missing:", filepath.Base(fi.Name()))
+	}
+}
+
+func TestOrphan(t *testing.T) {
+	// Setup the test file to add for the test.
+	fi, _ := ioutil.TempFile("", "TEST_GO_ADDFILE_")
+	fi.WriteString("Test the checksum")
+	fi.Close()
+	defer os.Remove(fi.Name())
+
+	// Setup the Test Bag
+	bag, _ := setupTestBag("_GOTEST_BAG_ADDFILE_")
+	defer os.RemoveAll(bag.Path())
+
+	bag.AddFile(fi.Name(), filepath.Base(fi.Name()))
+	bag.Close()
+
+	// It should find no orphans.
+	if err := bag.Orphans(); err != nil {
+		t.Error("Unexpected Orphan File:", err)
+	}
+}
