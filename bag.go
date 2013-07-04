@@ -233,8 +233,9 @@ func (b *Bag) Inventory() error {
 
 // Method looks to find any items inside the bag that are not accounted for in one of
 // as part of the tags, manifests or in the payload list.
-func (b *Bag) Orphans() error {
+func (b *Bag) Orphans() []string {
 	fList := make(map[string]bool)
+	oList := []string{}
 
 	// Tag files
 	for fPath, _ := range b.tagfiles {
@@ -256,17 +257,14 @@ func (b *Bag) Orphans() error {
 	// WalkDir function to collect files in the bag..
 	visit := func(pth string, info os.FileInfo, err error) error {
 		if !info.IsDir() {
-			relPath := strings.TrimPrefix(pth, b.Path())
-			if _, ok := fList[relPath]; ok {
-				return nil
+			relPath := strings.TrimPrefix(pth, b.Path()+bagutil.PathSeparator())
+			if _, ok := fList[relPath]; !ok {
+				oList = append(oList, relPath)
 			}
-			return fmt.Errorf("Orphaned file inside of bag: %s", relPath)
 		}
 		return err
 	}
-	if err := filepath.Walk(b.Path(), visit); err != nil {
-		return err
-	}
+	filepath.Walk(b.Path(), visit)
 
-	return nil
+	return oList
 }

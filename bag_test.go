@@ -360,7 +360,7 @@ func TestOrphan(t *testing.T) {
 	bag.Close()
 
 	// It should find no orphans.
-	if err := bag.Orphans(); err != nil {
-		t.Error("Unexpected Orphan File:", err)
+	if oList := bag.Orphans(); len(oList) > 0 {
+		t.Error("Unexpected Orphan File(s):", oList)
 	}
 }
