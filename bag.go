@@ -11,7 +11,6 @@ import (
 	"github.com/APTrust/bagins/bagutil"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 // Represents the basic structure of a bag which is controlled by methods.
@@ -231,8 +230,8 @@ func (b *Bag) Inventory() error {
 	return nil
 }
 
-// Method looks to find any items inside the bag that are not accounted for in one of
-// as part of the tags, manifests or in the payload list.
+// Method returns the filepath of any files appearing in Bag.Contents that are
+// not found in Bag.Manifest
 func (b *Bag) Orphans() []string {
 	fList := make(map[string]bool)
 	oList := []string{}
@@ -254,17 +253,54 @@ func (b *Bag) Orphans() []string {
 		fList[fPath] = true
 	}
 
+	return oList
+}
+
+func (b *Bag) Contents() ([]string, []error) {
+
+	fList := []string{}
+	eList := []error{}
+
 	// WalkDir function to collect files in the bag..
 	visit := func(pth string, info os.FileInfo, err error) error {
+		if err != nil {
+			eList = append(eList, err)
+		}
 		if !info.IsDir() {
-			relPath := strings.TrimPrefix(pth, b.Path()+bagutil.PathSeparator())
-			if _, ok := fList[relPath]; !ok {
-				oList = append(oList, relPath)
+			fp, err := filepath.Rel(b.Path(), pth)
+			if err != nil {
+				return err
 			}
+			fList = append(fList, fp)
 		}
 		return err
 	}
-	filepath.Walk(b.Path(), visit)
 
-	return oList
+	if err := filepath.Walk(b.Path(), visit); err != nil {
+
+	}
+
+	return fList, eList
+}
+
+func (b *Bag) FileManifest() ([]string, []error) {
+
+	fList := []string{}
+	eList := []error{}
+
+	for fPath, _ := range b.tagfiles {
+		fList = append(fList, fPath)
+	}
+
+	mf, _ := b.Manifest()
+	for fPath, _ := range mf.Data {
+		fList = append(fList, fPath)
+	}
+	// Confirm Manifest files are there.
+	for _, mf := range b.manifests {
+		fPath := filepath.Base(mf.Name())
+		fList = append(fList, fPath)
+	}
+
+	return fList, eList
 }

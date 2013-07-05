@@ -345,22 +345,50 @@ func TestInventory(t *testing.T) {
 	}
 }
 
-func TestOrphan(t *testing.T) {
-	// Setup the test file to add for the test.
-	fi, _ := ioutil.TempFile("", "TEST_GO_ADDFILE_")
-	fi.WriteString("Test the checksum")
-	fi.Close()
-	defer os.Remove(fi.Name())
+// func TestOrphan(t *testing.T) {
+// 	// Setup the test file to add for the test.
+// 	fi, _ := ioutil.TempFile("", "TEST_GO_ADDFILE_")
+// 	fi.WriteString("Test the checksum")
+// 	fi.Close()
+// 	defer os.Remove(fi.Name())
 
-	// Setup the Test Bag
-	bag, _ := setupTestBag("_GOTEST_BAG_ADDFILE_")
-	defer os.RemoveAll(bag.Path())
+// 	// Setup the Test Bag
+// 	bag, _ := setupTestBag("_GOTEST_BAG_ORPHAN_")
+// 	defer os.RemoveAll(bag.Path())
 
-	bag.AddFile(fi.Name(), filepath.Base(fi.Name()))
-	bag.Close()
+// 	bag.AddFile(fi.Name(), filepath.Base(fi.Name()))
+// 	bag.Close()
 
-	// It should find no orphans.
-	if oList := bag.Orphans(); len(oList) > 0 {
-		t.Error("Unexpected Orphan File(s):", oList)
-	}
-}
+// 	// It should find no orphans.
+// 	if oList := bag.Orphans(); len(oList) > 0 {
+// 		t.Error("Unexpected Orphan File(s):", oList)
+// 	}
+
+// 	// Setup an orphan file
+// 	oFi, _ := os.Create(filepath.Join(bag.Path(), "orphan_file.txt"))
+// 	oFi.Close()
+
+// 	// It should find an orphan.
+// 	if oList := bag.Orphans(); len(oList) < 1 {
+// 		t.Error("Did not detect orphan tagfile:", oFi.Name())
+// 	}
+
+// 	bag.AddTagfile("orphan_file.txt")
+// 	// It should not find an orphan.
+// 	if oList := bag.Orphans(); len(oList) > 0 {
+// 		t.Error("Unexpected Orphan File(s):", strings.Join(oList, "\n"))
+// 	}
+
+// 	// Setup orphan datafile
+// 	odFi, _ := os.Create(filepath.Join(bag.Path(), "data", "orphan_datafile.txt"))
+// 	oFi.Close()
+
+// 	//it should find an orphan.
+// 	if oList := bag.Orphans(); len(oList) < 0 {
+// 		t.Error("Did not detect orphan tagfile:", odFi.Name())
+// 	}
+
+// 	if err := os.RemoveAll(bag.Path()); err != nil {
+// 		t.Error("Did not cleanup bag.", err)
+// 	}
+// }
