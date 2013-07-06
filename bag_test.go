@@ -1,6 +1,7 @@
 package bagins_test
 
 import (
+	"fmt"
 	"github.com/APTrust/bagins"
 	"github.com/APTrust/bagins/bagutil"
 	"io/ioutil"
@@ -292,6 +293,57 @@ func TestClose(t *testing.T) {
 	}
 }
 
+func TestContents(t *testing.T) {
+
+	// Setup the test bag.
+	bag, _ := setupTestBag("_GOTEST_BAG_CONTENTS_")
+	defer os.RemoveAll(bag.Path())
+
+	// Setup the test file to add for the test.
+	fi, _ := os.Create((filepath.Join(bag.Path(), "data", "TEST_GO_DATAFILE.txt")))
+	fi.WriteString("Test the checksum")
+	fi.Close()
+
+	expFiles := make(map[string]bool)
+	expFiles["manifest-sha1.txt"] = true
+	expFiles["bagit.txt"] = true
+	expFiles[filepath.Join("data", "TEST_GO_DATAFILE.txt")] = true
+
+	cn, _ := bag.Contents()
+
+	for _, fName := range cn {
+		if _, ok := expFiles[fName]; !ok {
+			t.Error("Unexpected file:", fName)
+		}
+	}
+}
+
+func TestFileManifest(t *testing.T) {
+	// Setup the test bag.
+	bag, _ := setupTestBag("_GOTEST_BAG_FILEMANIFEST_")
+	defer os.RemoveAll(bag.Path())
+
+	// Setup the test file to add for the test.
+	dfPath := filepath.Join("data", "TEST_GO_DATAFILE.txt")
+	fi, _ := os.Create((filepath.Join(bag.Path(), dfPath)))
+	fi.WriteString("Test the checksum")
+	fi.Close()
+
+	expFiles := make(map[string]bool)
+	expFiles["manifest-sha1.txt"] = true
+	expFiles["bagit.txt"] = true
+
+	fm, _ := bag.FileManifest()
+	for _, f := range fm {
+		if f == dfPath {
+			t.Error("Detecting file it should not:", dfPath)
+		}
+		if _, ok := expFiles[f]; !ok {
+			t.Error("Did not detect an expected file:", f)
+		}
+	}
+}
+
 func TestInventory(t *testing.T) {
 
 	// Setup the test file to add for the test.
@@ -345,101 +397,54 @@ func TestInventory(t *testing.T) {
 	}
 }
 
-func TestContents(t *testing.T) {
-
-	// Setup the test bag.
-	bag, _ := setupTestBag("_GOTEST_BAG_CONTENTS_")
-	defer os.RemoveAll(bag.Path())
-
+func TestOrphan(t *testing.T) {
 	// Setup the test file to add for the test.
-	fi, _ := os.Create((filepath.Join(bag.Path(), "data", "TEST_GO_DATAFILE.txt")))
+	fi, _ := ioutil.TempFile("", "TEST_GO_ADDFILE_")
 	fi.WriteString("Test the checksum")
 	fi.Close()
+	defer os.Remove(fi.Name())
 
-	expFiles := make(map[string]bool)
-	expFiles["manifest-sha1.txt"] = true
-	expFiles["bagit.txt"] = true
-	expFiles[filepath.Join("data", "TEST_GO_DATAFILE.txt")] = true
-
-	cn, _ := bag.Contents()
-
-	for _, fName := range cn {
-		if _, ok := expFiles[fName]; !ok {
-			t.Error("Unexpected file:", fName)
-		}
-	}
-}
-
-func TestFileManifest(t *testing.T) {
-	// Setup the test bag.
-	bag, _ := setupTestBag("_GOTEST_BAG_FILEMANIFEST_")
+	// Setup the Test Bag
+	bag, _ := setupTestBag("_GOTEST_BAG_ORPHAN_")
 	defer os.RemoveAll(bag.Path())
 
-	// Setup the test file to add for the test.
-	dfPath := filepath.Join("data", "TEST_GO_DATAFILE.txt")
-	fi, _ := os.Create((filepath.Join(bag.Path(), dfPath)))
-	fi.WriteString("Test the checksum")
-	fi.Close()
-
-	expFiles := make(map[string]bool)
-	expFiles["manifest-sha1.txt"] = true
-	expFiles["bagit.txt"] = true
-
-	fm, _ := bag.FileManifest()
-	for _, f := range fm {
-		if f == dfPath {
-			t.Error("Detecting file it should not:", dfPath)
-		}
-		if _, ok := expFiles[f]; !ok {
-			t.Error("Did not detect an expected file:", f)
-		}
+	bag.AddFile(fi.Name(), filepath.Base(fi.Name()))
+	if errs := bag.Close(); len(errs) > 0 {
+		t.Error(errs)
 	}
+
+	// It should find no orphans.
+	if oList := bag.Orphans(); len(oList) > 0 {
+		t.Error("Unexpected Orphan File(s):", oList)
+	}
+
+	// Setup an orphan file
+	oFi, _ := os.Create(filepath.Join(bag.Path(), "orphan_file.txt"))
+	oFi.Close()
+
+	// It should find an orphan.
+	if oList := bag.Orphans(); len(oList) < 1 {
+		inv, _ := bag.FileManifest()
+		fmt.Println(inv)
+		cnt, _ := bag.Contents()
+		fmt.Println(cnt)
+		fmt.Println(oList)
+		t.Error("Did not detect orphan tagfile:", oFi.Name())
+	}
+
+	// bag.AddTagfile("orphan_file.txt")
+	// // It should not find an orphan.
+	// if oList := bag.Orphans(); len(oList) > 0 {
+	// 	t.Error("Unexpected Orphan File(s):", strings.Join(oList, "\n"))
+	// }
+
+	// // Setup orphan datafile
+	// odFi, _ := os.Create(filepath.Join(bag.Path(), "data", "orphan_datafile.txt"))
+	// oFi.Close()
+
+	// //it should find an orphan.
+	// if oList := bag.Orphans(); len(oList) < 0 {
+	// 	t.Error("Did not detect orphan tagfile:", odFi.Name())
+	// }
+
 }
-
-// func TestOrphan(t *testing.T) {
-// 	// Setup the test file to add for the test.
-// 	fi, _ := ioutil.TempFile("", "TEST_GO_ADDFILE_")
-// 	fi.WriteString("Test the checksum")
-// 	fi.Close()
-// 	defer os.Remove(fi.Name())
-
-// 	// Setup the Test Bag
-// 	bag, _ := setupTestBag("_GOTEST_BAG_ORPHAN_")
-// 	defer os.RemoveAll(bag.Path())
-
-// 	bag.AddFile(fi.Name(), filepath.Base(fi.Name()))
-// 	bag.Close()
-
-// 	// It should find no orphans.
-// 	if oList := bag.Orphans(); len(oList) > 0 {
-// 		t.Error("Unexpected Orphan File(s):", oList)
-// 	}
-
-// 	// Setup an orphan file
-// 	oFi, _ := os.Create(filepath.Join(bag.Path(), "orphan_file.txt"))
-// 	oFi.Close()
-
-// 	// It should find an orphan.
-// 	if oList := bag.Orphans(); len(oList) < 1 {
-// 		t.Error("Did not detect orphan tagfile:", oFi.Name())
-// 	}
-
-// 	bag.AddTagfile("orphan_file.txt")
-// 	// It should not find an orphan.
-// 	if oList := bag.Orphans(); len(oList) > 0 {
-// 		t.Error("Unexpected Orphan File(s):", strings.Join(oList, "\n"))
-// 	}
-
-// 	// Setup orphan datafile
-// 	odFi, _ := os.Create(filepath.Join(bag.Path(), "data", "orphan_datafile.txt"))
-// 	oFi.Close()
-
-// 	//it should find an orphan.
-// 	if oList := bag.Orphans(); len(oList) < 0 {
-// 		t.Error("Did not detect orphan tagfile:", odFi.Name())
-// 	}
-
-// 	if err := os.RemoveAll(bag.Path()); err != nil {
-// 		t.Error("Did not cleanup bag.", err)
-// 	}
-// }
