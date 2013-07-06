@@ -305,20 +305,20 @@ func TestInventory(t *testing.T) {
 	defer os.RemoveAll(bag.Path())
 
 	// It should not throw an error.
-	if err := bag.Inventory(); err != nil {
-		t.Error("Initial Bag Creation:", err)
+	if err := bag.Inventory(); len(err) > 0 {
+		t.Errorf("Initial Bag Creation: %v", err)
 	}
 
 	// It should not throw an error for an added tag file.
 	fn := "test_tagfile.txt"
 	bag.AddTagfile(fn)
-	if err := bag.Inventory(); err != nil {
+	if err := bag.Inventory(); len(err) > 0 {
 		t.Error(err)
 	}
 
 	// It should thrown an error if tagfile is remove.
 	os.Remove(filepath.Join(bag.Path(), fn))
-	if err := bag.Inventory(); err == nil {
+	if errs := bag.Inventory(); len(errs) < 1 {
 		t.Error("Does not detect when a tag file has been deleted!")
 	}
 	bag.Close() // rewrites and tagfile.
@@ -329,7 +329,7 @@ func TestInventory(t *testing.T) {
 	mf.Data[pfName] = ""
 
 	// It should throw an error when unable to find manifest entry.
-	if err := bag.Inventory(); err == nil {
+	if errs := bag.Inventory(); len(errs) < 1 {
 		t.Error("Not detecting a missiong file in the payload:")
 	}
 
@@ -340,7 +340,7 @@ func TestInventory(t *testing.T) {
 	}
 	bag.Close()
 
-	if err := bag.Inventory(); err != nil {
+	if errs := bag.Inventory(); len(errs) > 0 {
 		t.Error("Incorrectly reads a payload file as missing:", filepath.Base(fi.Name()))
 	}
 }

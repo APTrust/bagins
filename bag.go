@@ -264,8 +264,8 @@ func (b *Bag) Inventory() []error {
 	}
 
 	for _, fl := range fls {
-		if _, err := os.Stat(fl); os.IsNotExist(err) {
-			errs = append(fmt.Errorf("Unable to find: %s", err)
+		if _, err := os.Stat(filepath.Join(b.Path(), fl)); os.IsNotExist(err) {
+			errs = append(errs, fmt.Errorf("Unable to find: %v", fl))
 		}
 	}
 
@@ -273,7 +273,7 @@ func (b *Bag) Inventory() []error {
 }
 
 // Method returns the filepath of any files appearing in Bag.Contents that are
-// not found in Bag.Manifest
+// not found in Bag.FileManifest
 func (b *Bag) Orphans() []string {
 	fList := make(map[string]bool)
 	oList := []string{}
