@@ -345,6 +345,57 @@ func TestInventory(t *testing.T) {
 	}
 }
 
+func TestContents(t *testing.T) {
+
+	// Setup the test bag.
+	bag, _ := setupTestBag("_GOTEST_BAG_CONTENTS_")
+	defer os.RemoveAll(bag.Path())
+
+	// Setup the test file to add for the test.
+	fi, _ := os.Create((filepath.Join(bag.Path(), "data", "TEST_GO_DATAFILE.txt")))
+	fi.WriteString("Test the checksum")
+	fi.Close()
+
+	expFiles := make(map[string]bool)
+	expFiles["manifest-sha1.txt"] = true
+	expFiles["bagit.txt"] = true
+	expFiles[filepath.Join("data", "TEST_GO_DATAFILE.txt")] = true
+
+	cn, _ := bag.Contents()
+
+	for _, fName := range cn {
+		if _, ok := expFiles[fName]; !ok {
+			t.Error("Unexpected file:", fName)
+		}
+	}
+}
+
+func TestFileManifest(t *testing.T) {
+	// Setup the test bag.
+	bag, _ := setupTestBag("_GOTEST_BAG_FILEMANIFEST_")
+	defer os.RemoveAll(bag.Path())
+
+	// Setup the test file to add for the test.
+	dfPath := filepath.Join("data", "TEST_GO_DATAFILE.txt")
+	fi, _ := os.Create((filepath.Join(bag.Path(), dfPath)))
+	fi.WriteString("Test the checksum")
+	fi.Close()
+
+	expFiles := make(map[string]bool)
+	expFiles["manifest-sha1.txt"] = true
+	expFiles["bagit.txt"] = true
+
+	fm, _ := bag.FileManifest()
+	for _, f := range fm {
+		if f == dfPath {
+			t.Error("Detecting file it should not:", dfPath)
+		}
+		if _, ok := expFiles[f]; !ok {
+			t.Error("Did not detect an expected file:", f)
+		}
+	}
+}
+
 // func TestOrphan(t *testing.T) {
 // 	// Setup the test file to add for the test.
 // 	fi, _ := ioutil.TempFile("", "TEST_GO_ADDFILE_")
