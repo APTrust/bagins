@@ -38,7 +38,7 @@ type Bag struct {
 //
 // example:
 //		hsh, _ := bagutil.LookupHashFunc("sha256")
-//		cs := bagutil.NewChecksumAlgorithm(algo, hsh)
+//		cs := bagutil.NewChecksumAlgorithm("sha256", hsh)
 // 		NewBag("archive/bags", "bag-34323", cs)
 func NewBag(location string, name string, cs *bagutil.ChecksumAlgorithm) (*Bag, error) {
 	// Start with creating the directories.
@@ -101,8 +101,10 @@ func (b *Bag) createBagItFile() (*TagFile, error) {
 
 // METHODS FOR MANAGING BAG PAYLOADS
 
-// Adds a file to the bag payload and adds the generated checksum to the
-// manifest.
+// Adds a file specified by src parameter to the data directory under
+// the relative path and filename provided in the dst parameter.
+// example:
+//			err := b.AddFile("/tmp/myfile.txt", "myfile.txt")
 func (b *Bag) AddFile(src string, dst string) error {
 	fx, err := b.payload.Add(src, dst, b.cs.New())
 	if err != nil {
@@ -114,8 +116,10 @@ func (b *Bag) AddFile(src string, dst string) error {
 	return err
 }
 
-// Performans a Bag.Add on all files found under the src location including all
+// Performans a Bag.AddFile on all files found under the src location including all
 // subdirectories.
+// example:
+//			errs := b.AddDir("/tmp/mypreservationfiles")
 func (b *Bag) AddDir(src string) (errs []error) {
 	data, errs := b.payload.AddAll(src, b.cs.Algo())
 	mf, err := b.Manifest()
@@ -132,6 +136,8 @@ func (b *Bag) AddDir(src string) (errs []error) {
 
 // Returns the default manifest of the bag as determined by its
 // checksum algorithm.
+// example:
+// 			mf, err := b.Manifest()
 func (b *Bag) Manifest() (*Manifest, error) {
 	if mf, ok := b.manifests[b.cs.Name()]; ok {
 		return mf, nil
@@ -141,8 +147,11 @@ func (b *Bag) Manifest() (*Manifest, error) {
 
 // METHODS FOR MANAGING BAG TAG FILES
 
-// Adds a tagfile to the bag, creating whatever subdirectories are needed
-// as indicated by the filename.
+// Adds a tagfile to the bag with the filename provided,
+// creating whatever subdirectories are needed if supplied
+// as part of name parameter.
+// example:
+// 			err := b.AddTagfile("baginfo.txt")
 func (b *Bag) AddTagfile(name string) error {
 	tagPath := filepath.Join(b.Path(), name)
 	if err := os.MkdirAll(filepath.Dir(tagPath), 0766); err != nil {
@@ -159,7 +168,9 @@ func (b *Bag) AddTagfile(name string) error {
 	return nil
 }
 
-// Finds a tagfile in by it's relative path to the bag root directory.
+// Finds a tagfile in by its relative path to the bag root directory.
+// example:
+//			tf, err := b.TagFile("bag-info.txt")
 func (b *Bag) TagFile(name string) (*TagFile, error) {
 	if tf, ok := b.tagfiles[name]; ok {
 		return tf, nil
@@ -167,7 +178,9 @@ func (b *Bag) TagFile(name string) (*TagFile, error) {
 	return nil, fmt.Errorf("Unable to find tagfile %s", name)
 }
 
-// Returns the data fields for the baginfo.txt tag file in key, value pairs.
+// Convienence method to return the bag-info.txt tag file if it exists.  Since
+// this is optional it will not be created by default and will return an error
+// if you have not defined or added it yourself via Bag.AddTagfile
 func (b *Bag) BagInfo() (*TagFile, error) {
 	tf, err := b.TagFile("bag-info.txt")
 	if err != nil {
