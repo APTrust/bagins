@@ -1,5 +1,8 @@
 /*
+Package for working with files stored using the BagIt specification (see below).
 
+It facilitates the creation of bags, adding files to the bag payload and managing
+checksums for the file manifest as well as data stored in tag files.
 
 For more information on Bag tagfiles see
 http://tools.ietf.org/html/draft-kunze-bagit-09#section-2.3
