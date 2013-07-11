@@ -1,5 +1,13 @@
 package bagins
 
+/*
+
+"Oft in lies truth is hidden."
+
+- Glorfindel
+
+*/
+
 import (
 	"errors"
 	"fmt"

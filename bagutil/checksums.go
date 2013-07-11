@@ -1,5 +1,13 @@
 package bagutil
 
+/*
+
+"Deeds will not be less valiant because they are unpraised."
+
+- Aragorn
+
+*/
+
 import (
 	"crypto"
 	_ "crypto/md5"

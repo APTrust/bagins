@@ -6,6 +6,14 @@ http://tools.ietf.org/html/draft-kunze-bagit-09#section-2.3
 */
 package bagins
 
+/*
+
+“He that breaks a thing to find out what it is has left the path of wisdom.”
+
+- Gandalf the Grey
+
+*/
+
 import (
 	"fmt"
 	"github.com/APTrust/bagins/bagutil"
@@ -265,7 +273,7 @@ func (b *Bag) Inventory() []error {
 
 	for _, fl := range fls {
 		if _, err := os.Stat(fl); os.IsNotExist(err) {
-			errs = append(fmt.Errorf("Unable to find: %s", err)
+			errs = append(errs, fmt.Errorf("Unable to find: %s", err))
 		}
 	}
 
