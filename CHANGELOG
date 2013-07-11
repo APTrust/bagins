@@ -14,3 +14,18 @@ CHANGELOG
 -----
 
 * bagmaker runs with throttles go routines to avoid a too many open files error.
+
+0.7.0
+------
+
+* Added a Bag.Contents method that lists all the files found in the bag directory
+  regardless to weather they are managed by the bag object or not.
+
+* Added a Bag.FileManifest method to list all the files in a bag object it manages
+  and can work on.
+
+* Added a Bag.Invetory method that confirms that all files lin Bag.FileManifest are
+  indeed written inside the bag.
+
+* Added a Bag.Orphans method that lists any files in the bag that are not found
+  in the Bag.FileManifest.
