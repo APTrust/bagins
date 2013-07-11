@@ -1,5 +1,13 @@
 package bagins
 
+/*
+
+"Faithless is he that says farewell when the road darkens."
+
+- Gimli
+
+*/
+
 import (
 	"fmt"
 	"hash"

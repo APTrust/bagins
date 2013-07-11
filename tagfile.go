@@ -1,5 +1,13 @@
 package bagins
 
+/*
+
+"Oft the unbidden guest proves the best company."
+
+- Eomer
+
+*/
+
 import (
 	"bytes"
 	"errors"

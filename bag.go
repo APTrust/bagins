@@ -6,6 +6,14 @@ http://tools.ietf.org/html/draft-kunze-bagit-09#section-2.3
 */
 package bagins
 
+/*
+
+“He that breaks a thing to find out what it is has left the path of wisdom.”
+
+- Gandalf the Grey
+
+*/
+
 import (
 	"fmt"
 	"github.com/APTrust/bagins/bagutil"
@@ -17,8 +25,8 @@ import (
 type Bag struct {
 	pth       string // the bag is under.
 	payload   *Payload
-	manifests map[string]*Manifest
-	tagfiles  map[string]*TagFile
+	manifests map[string]*Manifest // Algo string as key.
+	tagfiles  map[string]*TagFile  // relative path to bag as key,
 	cs        *bagutil.ChecksumAlgorithm
 }
 
@@ -71,7 +79,7 @@ func NewBag(location string, name string, cs *bagutil.ChecksumAlgorithm) (*Bag, 
 	if err != nil {
 		return nil, err
 	}
-	bag.tagfiles["bagit"] = tf
+	bag.tagfiles["bagit.txt"] = tf
 
 	return bag, nil
 }
@@ -201,9 +209,97 @@ func (b *Bag) Close() (errs []error) {
 	return
 }
 
-// TODO create a method to return the name of the bag root folder alone as the
-// bag name
+// Walks the bag directory and subdirectories and returns the
+// filepaths found inside and any errors.
+func (b *Bag) Contents() ([]string, []error) {
 
-// TODO create method to return a list of tag files.
+	fList := []string{}
+	eList := []error{}
 
-// TODO create a method to return a list of manifest files.
+	// WalkDir function to collect files in the bag..
+	visit := func(pth string, info os.FileInfo, err error) error {
+		if err != nil {
+			eList = append(eList, err)
+		}
+		if !info.IsDir() {
+			fp, err := filepath.Rel(b.Path(), pth)
+			if err != nil {
+				return err
+			}
+			fList = append(fList, fp)
+		}
+		return err
+	}
+
+	if err := filepath.Walk(b.Path(), visit); err != nil {
+
+	}
+
+	return fList, eList
+}
+
+// Returns all the filepaths for all files being tracked by the bag.
+// This includes the list of manifests, tags and files in the data directory.
+// TODO:  Remove the error slice
+func (b *Bag) FileManifest() ([]string, []error) {
+
+	fList := []string{}
+	eList := []error{}
+
+	for fPath, _ := range b.tagfiles {
+		fList = append(fList, fPath)
+	}
+
+	mf, _ := b.Manifest()
+	for fPath, _ := range mf.Data {
+		fList = append(fList, fPath)
+	}
+	// Confirm Manifest files are there.
+	for _, mf := range b.manifests {
+		fPath := filepath.Base(mf.Name())
+		fList = append(fList, fPath)
+	}
+
+	return fList, eList
+}
+
+// Checks that the bag actually contains all the files it expect to and returns
+// slice of errors indicating the ones that don't.
+func (b *Bag) Inventory() []error {
+	// Confirm Tagfiles are there.
+
+	fls, errs := b.FileManifest()
+	if len(errs) > 0 {
+		return errs
+	}
+
+	for _, fl := range fls {
+		if _, err := os.Stat(filepath.Join(b.Path(), fl)); os.IsNotExist(err) {
+			errs = append(errs, fmt.Errorf("Unable to find: %v", fl))
+		}
+	}
+
+	return errs
+}
+
+// Method returns the filepath of any files appearing in Bag.Contents that are
+// not found in Bag.FileManifest
+func (b *Bag) Orphans() []string {
+
+	oList := []string{}
+	// Make map to compare contents to.
+	mf, _ := b.FileManifest()
+	fMap := make(map[string]bool)
+	for _, fn := range mf {
+		fMap[fn] = true
+	}
+
+	cn, _ := b.Contents()
+	for _, fn := range cn {
+		if _, ok := fMap[fn]; !ok {
+			oList = append(oList, fn)
+		}
+	}
+
+	return oList
+}
