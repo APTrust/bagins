@@ -239,7 +239,8 @@ func (b *Bag) Contents() ([]string, []error) {
 }
 
 // Returns all the filepaths for all files being tracked by the bag.
-// This includes the lsit of manifests, tags and files in the data directory.
+// This includes the list of manifests, tags and files in the data directory.
+// TODO:  Remove the error slice
 func (b *Bag) FileManifest() ([]string, []error) {
 
 	fList := []string{}
@@ -262,7 +263,8 @@ func (b *Bag) FileManifest() ([]string, []error) {
 	return fList, eList
 }
 
-// Checks that the bag actually contains all the files it expect to.
+// Checks that the bag actually contains all the files it expect to and returns
+// slice of errors indicating the ones that don't.
 func (b *Bag) Inventory() []error {
 	// Confirm Tagfiles are there.
 
@@ -272,8 +274,8 @@ func (b *Bag) Inventory() []error {
 	}
 
 	for _, fl := range fls {
-		if _, err := os.Stat(fl); os.IsNotExist(err) {
-			errs = append(errs, fmt.Errorf("Unable to find: %s", err))
+		if _, err := os.Stat(filepath.Join(b.Path(), fl)); os.IsNotExist(err) {
+			errs = append(errs, fmt.Errorf("Unable to find: %v", fl))
 		}
 	}
 
@@ -281,26 +283,22 @@ func (b *Bag) Inventory() []error {
 }
 
 // Method returns the filepath of any files appearing in Bag.Contents that are
-// not found in Bag.Manifest
+// not found in Bag.FileManifest
 func (b *Bag) Orphans() []string {
-	fList := make(map[string]bool)
+
 	oList := []string{}
-
-	// Tag files
-	for fPath, _ := range b.tagfiles {
-		fList[fPath] = true
+	// Make map to compare contents to.
+	mf, _ := b.FileManifest()
+	fMap := make(map[string]bool)
+	for _, fn := range mf {
+		fMap[fn] = true
 	}
 
-	// Manifest Payload
-	mf, _ := b.Manifest()
-	for fPath, _ := range mf.Data {
-		fList[fPath] = true
-	}
-
-	// Manifest Files
-	for _, mf := range b.manifests {
-		fPath := filepath.Base(mf.Name())
-		fList[fPath] = true
+	cn, _ := b.Contents()
+	for _, fn := range cn {
+		if _, ok := fMap[fn]; !ok {
+			oList = append(oList, fn)
+		}
 	}
 
 	return oList
