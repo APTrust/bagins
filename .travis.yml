@@ -1,0 +1,9 @@
+language: go
+go: tip
+script: go test
+notifications:
+  email:
+    recipients:
+      - streamweaver@gmail.com
+    on_success: change
+    on_failure: always
