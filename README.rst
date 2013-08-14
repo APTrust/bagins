@@ -1,3 +1,5 @@
+Travis Status: "!https://travis-ci.org/APTrust/bagins.png!":https://travis-ci.org/APTrust/bagins
+
 BagIns - BagIt Library in Go
 ============================
 
