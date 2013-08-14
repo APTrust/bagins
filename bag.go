@@ -248,7 +248,7 @@ func (b *Bag) Contents() ([]string, []error) {
 	}
 
 	if err := filepath.Walk(b.Path(), visit); err != nil {
-
+		eList = append(eList, err)
 	}
 
 	return fList, eList
