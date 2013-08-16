@@ -116,6 +116,9 @@ func (p *Payload) AddAll(src string, hsh func() hash.Hash) (fxs map[string]strin
 	return
 }
 
+// Returns the octetstream sum and number of files of all the files in the
+// payload directory.  See the BagIt specification "Oxsum" field of the
+// bag-info.txt file for more information.
 func (p *Payload) OctetStreamSum() (int64, int) {
 	var sum int64
 	var count int
