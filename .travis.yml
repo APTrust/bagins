@@ -1,6 +1,6 @@
 language: go
 go: tip
-script: go test
+script: go get github.com/gorilla/rpc/json && go test -v ./...
 notifications:
   email:
     recipients:
