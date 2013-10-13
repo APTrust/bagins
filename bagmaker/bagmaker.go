@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"github.com/APTrust/bagins"
 	"github.com/APTrust/bagins/bagutil"
+	"os"
 	"time"
 )
 
@@ -86,7 +87,7 @@ func main() {
 		return
 	}
 
-	if info := parse_info(os.Args); len(parse_info) > 0 {
+	if info := parse_info(os.Args); len(info) > 0 {
 		bag.AddTagfile("bag-info.txt")
 		if tf, err := bag.BagInfo(); err != nil {
 			tf.Data = info
@@ -100,7 +101,7 @@ func main() {
 	return
 }
 
-// Parses command line arguments to go into the 
+// Parses command line arguments to go into the
 
 func parse_info(args []string) map[string]string {
 	info := make(map[string]string)
