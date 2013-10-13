@@ -11,17 +11,19 @@ import (
 )
 
 const (
-	BAGDIR = filepath.Join(os.TempDir(), "rpcbags/")
-	PORT   = 8222
+	BAGDIR  = filepath.Join(os.TempDir(), "rpcbags/")
+	PORT    = 8222
+	RPCPATH = "/rpc"
 )
 
+// Starts
 func main() {
 	bagger := jsonbagger.NewJSONBagger()
 
 	server := rpc.NewServer()
 	server.Register(bagger)
 
-	server.HandleHTTP(rpc.DefaultRPCPath, rpc.DefaultDebugPath)
+	server.HandleHTTP(RPCPATH, rpc.DefaultDebugPath)
 
 	l, err := net.Listen("tcp", fmt.Sprintf(":%d", PORT))
 	if err != nil {
