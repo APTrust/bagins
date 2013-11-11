@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"github.com/APTrust/bagins"
 	"github.com/APTrust/bagins/bagutil"
+	"os"
 	"time"
 )
 
@@ -67,23 +68,42 @@ func main() {
 	}
 
 	begin := time.Now()
+
 	cs, err := bagutil.NewCheckByName(algo)
 	if err != nil {
 		fmt.Println("Unable to find checksum", algo)
 		return
 	}
+
 	bag, err := bagins.NewBag(dir, name, cs)
 	if err != nil {
 		fmt.Println("Bag Error:", err)
 		return
 	}
+
 	errs := bag.AddDir(payload)
 	for idx := range errs {
 		fmt.Println("AddDir Error:", errs[idx])
 		return
 	}
+
+	if info := parse_info(os.Args); len(info) > 0 {
+		bag.AddTagfile("bag-info.txt")
+		if tf, err := bag.BagInfo(); err != nil {
+			tf.Data = info
+		}
+	}
+
 	bag.Close()
+
 	elapsed := time.Since(begin)
 	fmt.Println("END: elapsed in", elapsed.Seconds(), "seconds.")
 	return
+}
+
+// Parses command line arguments to go into the
+
+func parse_info(args []string) map[string]string {
+	info := make(map[string]string)
+	return info
 }

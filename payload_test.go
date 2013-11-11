@@ -112,6 +112,29 @@ func TestPayloadAddAll(t *testing.T) {
 
 }
 
+func TestPayloadOctetStreamSum(t *testing.T) {
+	// Setup Test directory
+	pDir, _ := ioutil.TempDir("", "_GOTEST_Payload_")
+	defer os.RemoveAll(pDir)
+
+	// Setup test files
+	for i := 0; i < 100; i++ {
+		tstFile, _ := ioutil.TempFile(pDir, "_GOTEST_FILE_")
+		tstFile.WriteString("Test the checksum")
+		tstFile.Close()
+	}
+
+	p, _ := bagins.NewPayload(pDir)
+	sum, count := p.OctetStreamSum()
+
+	if sum != 1700 {
+		t.Error("Sum of octets expected to be 1700 but returned", sum)
+	}
+	if count != 100 {
+		t.Error("Count of files expected to be 100 but returned", count)
+	}
+}
+
 func BenchmarkPayload(b *testing.B) {
 	srcDir, _ := ioutil.TempDir("", "_GOTEST_SRCDIR_")
 	defer os.RemoveAll(srcDir)

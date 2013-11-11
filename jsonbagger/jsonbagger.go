@@ -24,7 +24,7 @@ type BagArgs struct {
 // Object to register with JSON RPC server for bag creation.
 type JSONBagger struct {
 	dir string // directory to create bags in.
-}
+} 
 
 func NewJSONBagger(dir string) *JSONBagger {
 	jb := new(JSONBagger)
