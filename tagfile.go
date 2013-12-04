@@ -29,22 +29,27 @@ type TagField struct {
 	value string // Value of the tag field
 }
 
+// Creates and returns a pointer to a new TagField
 func NewTagField(label string, value string) *TagField {
 	return &TagField{label, value}
 }
 
+// Returns the label string for the tag field.
 func (f *TagField) Label() string {
 	return f.label
 }
 
+// Sets the label string for the tag field.
 func (f *TagField) SetLabel(l string) {
 	f.label = l
 }
 
+// Returns the value string for the tag field.
 func (f *TagField) Value() string {
 	return f.value
 }
 
+// Sets the value string for the tag file.
 func (f *TagField) SetValue(v string) {
 	f.value = v
 }
