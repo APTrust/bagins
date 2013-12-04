@@ -56,27 +56,35 @@ func (f *TagField) SetValue(v string) {
 
 // TAG FIELD LIST
 
-// Ordered list of fields used in a TagFile.
+// Represents an ordered list of tag fields as specified for use with bag-info.txt
+// in the bag it standard.  It supports ordered, repeatable fields.
+// http://tools.ietf.org/html/draft-kunze-bagit-09#section-2.2.2
 type TagFieldList struct {
 	fields []TagField // Some useful manipulations in https://code.google.com/p/go-wiki/wiki/SliceTricks
 }
 
+// Returns a pointer to a new TagFieldList.
 func NewTagFieldList() *TagFieldList {
 	return new(TagFieldList)
 }
 
+// Returns a copy of an slice of the current tag fields.
 func (fl *TagFieldList) Fields() []TagField {
 	return fl.fields
 }
 
+// Sets the tag field slice to use for the tag field list.
 func (fl *TagFieldList) SetFields(fields []TagField) {
 	fl.fields = fields
 }
 
+// Adds a Field to the end of the tag field list.
 func (fl *TagFieldList) AddField(field TagField) {
 	fl.fields = append(fl.Fields(), field)
 }
 
+// Removes a field from the tag field list at the specified index.  Returns an error if
+// index out of bounds.
 func (fl *TagFieldList) RemoveField(i int) error {
 	if i+1 > len(fl.Fields()) || i < 0 {
 		return errors.New("Invalid index for TagField")
@@ -91,6 +99,7 @@ func (fl *TagFieldList) RemoveField(i int) error {
 
 // TAG FILES
 
+// Represents a tag file object in the bag with its related fields.
 type TagFile struct {
 	name string            // Filepath for tag file.
 	Data map[string]string // key value pairs of data for the tagfile.
