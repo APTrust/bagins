@@ -87,12 +87,12 @@ func main() {
 		return
 	}
 
-	if info := parse_info(os.Args); len(info) > 0 {
-		bag.AddTagfile("bag-info.txt")
-		if tf, err := bag.BagInfo(); err != nil {
-			tf.Data = info
-		}
-	}
+	// if info := parse_info(os.Args); len(info) > 0 {
+	// 	bag.AddTagfile("bag-info.txt")
+	// 	if tf, err := bag.BagInfo(); err != nil {
+	// 		tf.Data = info
+	// 	}
+	// }
 
 	bag.Close()
 
