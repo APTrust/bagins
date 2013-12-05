@@ -169,10 +169,9 @@ func TestNewTagFile(t *testing.T) {
 func TestTagFileCreate(t *testing.T) {
 	testPath := filepath.Join(os.TempDir(), "golang_test_tagfiles/_GOTEST_bagit.txt")
 	tagFile, _ := bagins.NewTagFile(testPath)
-	tagFile.Data = map[string]string{
-		"BagIt-Version":                `A metadata element MUST consist of a label, a colon, and a value, each separated by optional whitespace.  It is RECOMMENDED that lines not exceed 79 characters in length.  Long values may be continued onto the next line by inserting a newline (LF), a carriage return (CR), or carriage return plus newline (CRLF) and indenting the next line with linear white space (spaces or tabs).`,
-		"Tag-File-Character-Encodeing": "UTF-8",
-	}
+	tagFile.Data.AddField(*bagins.NewTagField("BagIt-Version", "A metadata element MUST consist of a label, a colon, and a value, each separated by optional whitespace.  It is RECOMMENDED that lines not exceed 79 characters in length.  Long values may be continued onto the next line by inserting a newline (LF), a carriage return (CR), or carriage return plus newline (CRLF) and indenting the next line with linear white space (spaces or tabs)."))
+	tagFile.Data.AddField(*bagins.NewTagField("Tag-File-Character-Encodeing", "UTF-8"))
+
 	err := tagFile.Create()
 	if err != nil {
 		t.Error(err)

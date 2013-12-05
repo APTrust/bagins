@@ -273,7 +273,7 @@ func TestClose(t *testing.T) {
 	tfName := "extratagfile.txt"
 	bag.AddTagfile("extratagfile.txt")
 	tf, _ := bag.TagFile(tfName)
-	tf.Data["MyNewField"] = "This is testdata."
+	tf.Data.AddField(*bagins.NewTagField("MyNewField", "This is testdata."))
 
 	// it should not throw an error.
 	if errs := bag.Close(); len(errs) != 0 {

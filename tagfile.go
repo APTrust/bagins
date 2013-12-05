@@ -101,8 +101,8 @@ func (fl *TagFieldList) RemoveField(i int) error {
 
 // Represents a tag file object in the bag with its related fields.
 type TagFile struct {
-	name string            // Filepath for tag file.
-	Data map[string]string // key value pairs of data for the tagfile.
+	name string        // Filepath for tag file.
+	Data *TagFieldList // key value pairs of data for the tagfile.
 }
 
 // Creates a new tagfile object and returns it or returns an error if improperly formatted.
@@ -111,7 +111,7 @@ func NewTagFile(name string) (tf *TagFile, err error) {
 	err = validateTagFileName(name)
 	tf = new(TagFile)
 	tf.name = filepath.Clean(name)
-	tf.Data = make(map[string]string)
+	tf.Data = new(TagFieldList)
 	return tf, err
 }
 
@@ -149,8 +149,8 @@ func (tf *TagFile) Create() error {
 	defer fileOut.Close()
 
 	// Write fields and data to the file.
-	for key, data := range tf.Data {
-		field, err := FormatField(key, data)
+	for _, f := range tf.Data.Fields() {
+		field, err := FormatField(f.Label(), f.Value())
 		if err != nil {
 			return err
 		}

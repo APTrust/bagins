@@ -97,8 +97,8 @@ func (b *Bag) createBagItFile() (*TagFile, error) {
 	if err != nil {
 		return nil, err
 	}
-	bagit.Data["BagIt-Version"] = "0.97"
-	bagit.Data["Tag-File-Character-Encoding"] = "UTF-8"
+	bagit.Data.AddField(*NewTagField("BagIt-Version", "0.97"))
+	bagit.Data.AddField(*NewTagField("Tag-File-Character-Encoding", "UTF-8"))
 	return bagit, nil
 }
 
