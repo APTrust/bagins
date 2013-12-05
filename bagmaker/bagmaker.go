@@ -12,7 +12,7 @@ import (
 	"fmt"
 	"github.com/APTrust/bagins"
 	"github.com/APTrust/bagins/bagutil"
-	"os"
+	// "os"
 	"time"
 )
 
