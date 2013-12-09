@@ -9,6 +9,7 @@ package bagins
 */
 
 import (
+	"bufio"
 	"bytes"
 	"errors"
 	"fmt"
@@ -115,17 +116,23 @@ func NewTagFile(name string) (tf *TagFile, err error) {
 	return tf, err
 }
 
-// Opens a tagfile, parsing the contents as tagfile field data and returning the TagFile object.
+// Reads a tagfile, parsing the contents as tagfile field data and returning the TagFile object.
 // name is the filepath to the tag file.  It throws an error if contents cannot be properly parsed.
-func OpenTagFile(name string) (*TagFile, error) {
+func ReadTagFile(name string) (*TagFile, []error) {
+	var errs []error
 	file, err := os.Open(name)
 	if err != nil {
-		return nil, err
+		return nil, append(errs, err)
 	}
 	defer file.Close()
 
 	tf, err := NewTagFile(name)
-	return tf, err
+	if err != nil {
+		return nil, append(errs, err)
+	}
+	data, errs := parseFields(file)
+	tf.Data.SetFields(data)
+	return tf, errs
 }
 
 // Returns the named filepath of the tagfile.
@@ -208,7 +215,41 @@ func validateTagFileName(name string) (err error) {
 
 // Reads the contents of file and parses tagfile fields from the contents or returns an error if
 // it contains unparsable data.
-// func parseFields(data map[string]string, file *os.File) (err error) {
-// 	re, err := regexp.Compile(`^\S*\:`)
-// 	return err
-// }
+func parseFields(file *os.File) ([]TagField, []error) {
+	var errors []error
+	re, err := regexp.Compile(`^(\S*\:)?(\s.*)$`)
+	if err != nil {
+		errors = append(errors, err)
+		return nil, errors
+	}
+
+	scanner := bufio.NewScanner(file)
+	var fields []TagField
+	var field TagField
+
+	// Parse the remaining lines.
+	for scanner.Scan() {
+		line := scanner.Text()
+		// See http://play.golang.org/p/zLqvg2qo1D for some testing on the field match.
+		if re.MatchString(line) {
+			data := re.FindStringSubmatch(line)
+			if data[1] != "" {
+				fields = append(fields, field)
+				field = *NewTagField(data[1], "")
+			}
+			if data[2] != "" {
+				value := strings.Trim(data[2], " ")
+				field.SetValue(strings.Join([]string{field.Value(), value}, " "))
+			}
+		} else {
+			err := fmt.Errorf("Unable to parse tag data from line: %s", line)
+			errors = append(errors, err)
+		}
+	}
+	if scanner.Err() != nil {
+		errors = append(errors, scanner.Err())
+	}
+
+	// See http://play.golang.org/p/nsw9zsAEPF for some testing on the field match.
+	return fields, errors
+}
