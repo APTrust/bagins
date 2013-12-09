@@ -166,6 +166,44 @@ func TestNewTagFile(t *testing.T) {
 	}
 }
 
+func TestReadTagFile(t *testing.T) {
+	// Expected Data
+	exp_list := [][]string{
+		[]string{"description", strings.Repeat("test ", 40)},
+		[]string{"title", "This is my title"},
+		[]string{"description", strings.Repeat("more ", 80)},
+	}
+
+	// Prep the test file
+	testPath := filepath.Join(os.TempDir(), "_GOTEST_READTAGFILE_bagit.txt")
+	fmt.Println(testPath)
+	tagFile, _ := bagins.NewTagFile(testPath)
+	for _, exp := range exp_list {
+		tagFile.Data.AddField(*bagins.NewTagField(exp[0], exp[1]))
+	}
+	tagFile.Create()
+	defer os.Remove(testPath)
+
+	// Open and test parsing the file.
+	tf, errs := bagins.ReadTagFile(testPath)
+	for _, err := range errs {
+		t.Error(err)
+	}
+	if len(tf.Data.Fields()) != 3 {
+		t.Error("Expected 3 but returned", len(tf.Data.Fields()), "fields!")
+	}
+
+	fields := tagFile.Data.Fields()
+	for idx, exp := range exp_list {
+		if fields[idx].Label() != exp[0] {
+			t.Error("Tag field", idx, "label", fields[idx].Label(), "is not expected value of", exp[0])
+		}
+		if fields[idx].Value() != exp[1] {
+			t.Error("Tag field", idx, "value", fields[idx].Value(), "is not expected value of", exp[1])
+		}
+	}
+}
+
 func TestTagFileCreate(t *testing.T) {
 	testPath := filepath.Join(os.TempDir(), "golang_test_tagfiles/_GOTEST_bagit.txt")
 	tagFile, _ := bagins.NewTagFile(testPath)
