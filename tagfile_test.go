@@ -176,7 +176,6 @@ func TestReadTagFile(t *testing.T) {
 
 	// Prep the test file
 	testPath := filepath.Join(os.TempDir(), "_GOTEST_READTAGFILE_bagit.txt")
-	fmt.Println(testPath)
 	tagFile, _ := bagins.NewTagFile(testPath)
 	for _, exp := range exp_list {
 		tagFile.Data.AddField(*bagins.NewTagField(exp[0], exp[1]))
