@@ -9,6 +9,7 @@ package bagins
 */
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"github.com/APTrust/bagins/bagutil"
@@ -46,6 +47,39 @@ func NewManifest(pth string, chkAlgo *bagutil.ChecksumAlgorithm) (*Manifest, err
 	return m, nil
 }
 
+func ReadManifest(name string) (*Manifest, []error) {
+	var errs []error
+
+	algo, err := GetAlgoName(name)
+	if err != nil {
+		return nil, append(errs, err)
+	}
+
+	hsh, err := bagutil.NewCheckByName(algo)
+	if err != nil {
+		return nil, append(errs, err)
+	}
+
+	file, err := os.Open(name)
+	if err != nil {
+		return nil, append(errs, err)
+	}
+
+	data, e := parseManifestData(file)
+	if e != nil {
+		errs = append(errs, e...)
+	}
+
+	m, err := NewManifest(name, hsh)
+	if err != nil {
+		return nil, append(errs, err)
+	}
+	m.Data = data
+
+	return m, errs
+
+}
+
 func (m *Manifest) RunChecksums() []error {
 	invalidSums := make([]error, 0)
 	for key, sum := range m.Data {
@@ -72,13 +106,13 @@ func (m *Manifest) Create() error {
 	basepath := filepath.Dir(m.name)
 
 	if err := os.MkdirAll(basepath, 0777); err != nil {
-		return errors.New("Error creating manifest directory: " + err.Error())
+		return err
 	}
 
 	// Create the tagfile.
 	fileOut, err := os.Create(m.name)
 	if err != nil {
-		return errors.New("Error creating manifest file: " + err.Error())
+		return err
 	}
 	defer fileOut.Close()
 
@@ -111,4 +145,27 @@ func GetAlgoName(name string) (string, error) {
 	}
 	algo := matches[2]
 	return algo, nil
+}
+
+// Reads the contents of file and parses checksum and file information in manifest format as
+// per the bagit specification.
+func parseManifestData(file *os.File) (map[string]string, []error) {
+	var errs []error
+	// See regexp examples at http://play.golang.org/p/_msLJ-lBEu
+	re := regexp.MustCompile(`^(\S*) *(.\S*)`)
+
+	scanner := bufio.NewScanner(file)
+	values := make(map[string]string)
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		if re.MatchString(line) {
+			data := re.FindStringSubmatch(line)
+			values[data[1]] = data[2]
+		} else {
+			errs = append(errs, fmt.Errorf("Unable to parse data from line: %s", line))
+		}
+	}
+
+	return values, errs
 }

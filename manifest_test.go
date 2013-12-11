@@ -2,6 +2,7 @@
 package bagins_test
 
 import (
+	"fmt"
 	"github.com/APTrust/bagins"
 	"github.com/APTrust/bagins/bagutil"
 	"io/ioutil"
@@ -21,6 +22,48 @@ func TestNewManifest(t *testing.T) {
 	if err != nil {
 		t.Error("Manifest could not be created!", err)
 	}
+}
+
+func TestReadManifest(t *testing.T) {
+	exp := make(map[string]string)
+	for i := 0; i < 40; i++ {
+		check := fmt.Sprintf("%x", rand.Int31())
+		fname := fmt.Sprintf("data/testfilename_%d.txt", i)
+		exp[fname] = check
+	}
+
+	// Setup a test manifest
+	h, err := bagutil.NewCheckByName("md5")
+	if err != nil {
+		t.Error(err)
+	}
+	mf, err := bagins.NewManifest(os.TempDir(), h)
+	if err != nil {
+		t.Error(err)
+	}
+	mf.Data = exp
+	err = mf.Create()
+	if err != nil {
+		t.Error(err)
+	}
+	fmt.Println(mf.Name())
+	// defer os.Remove(mf.Name())
+
+	// Open it and read the values.
+	m, errs := bagins.ReadManifest(mf.Name())
+	if len(errs) != 0 {
+		t.Error(errs)
+	}
+	for fname, check := range exp {
+		actual, ok := m.Data[fname]
+		if !ok {
+			t.Errorf("Expected key %s not found in manifest data", fname)
+		}
+		if actual != check {
+			t.Error("Invalid values in manifest.")
+		}
+	}
+
 }
 
 func TestGetAlgoName(t *testing.T) {
@@ -81,27 +124,16 @@ func TestManifestCreate(t *testing.T) {
 	os.Remove(m.Name())
 }
 
-//func TestManifestName(t *testing.T) {
-//	m := new(bagins.Manifest)
-//	if name := m.Name(); name != "" {
-//		t.Error("Expected empty string for unset BaseName and Algo but returned", m.Name())
-//	}
+func TestManifestName(t *testing.T) {
 
-//	// Set only BaseName should still be blank.
-//	m.BaseName = "_GOTEST_manifest"
-//	if name := m.Name(); name != "" {
-//		t.Error("Expected empty string for unset Algo but returned", m.Name())
-//	}
-
-//	// Set only Algo should still be blank.
-//	m.BaseName, m.Algo = "", "sha1"
-//	if name := m.Name(); name != "" {
-//		t.Error("Expected empty string for unset BaseName but returned", m.Name())
-//	}
-
-//	m.BaseName, m.Algo = "_GOTEST_manifest", "sha1"
-//	expected := "_GOTEST_manifest-sha1.txt"
-//	if name := m.Name(); name != expected {
-//		t.Error("Expected name", expected, "but returned", m.Name())
-//	}
-//}
+	// Set only Algo should still be blank.
+	h, _ := bagutil.NewCheckByName("SHA1")
+	m, err := bagins.NewManifest(os.TempDir(), h)
+	if err != nil {
+		t.Error(err)
+	}
+	exp := filepath.Join(os.TempDir(), "manifest-sha1.txt")
+	if name := m.Name(); name != exp {
+		t.Error("Expected mainfest name %s but returned %s", exp, m.Name())
+	}
+}

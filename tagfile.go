@@ -130,7 +130,7 @@ func ReadTagFile(name string) (*TagFile, []error) {
 	if err != nil {
 		return nil, append(errs, err)
 	}
-	data, errs := parseFields(file)
+	data, errs := parseTagFields(file)
 	tf.Data.SetFields(data)
 	return tf, errs
 }
@@ -215,9 +215,9 @@ func validateTagFileName(name string) (err error) {
 
 // Reads the contents of file and parses tagfile fields from the contents or returns an error if
 // it contains unparsable data.
-func parseFields(file *os.File) ([]TagField, []error) {
+func parseTagFields(file *os.File) ([]TagField, []error) {
 	var errors []error
-	re, err := regexp.Compile(`^(\S*\:)?(\s.*)$`)
+	re, err := regexp.Compile(`^(\S*\:)?(\s.*)?$`)
 	if err != nil {
 		errors = append(errors, err)
 		return nil, errors
@@ -235,12 +235,12 @@ func parseFields(file *os.File) ([]TagField, []error) {
 			data := re.FindStringSubmatch(line)
 			if data[1] != "" {
 				fields = append(fields, field)
-				field = *NewTagField(data[1], "")
+				field = *NewTagField(data[1], strings.Trim(data[2], " "))
+				continue
 			}
-			if data[2] != "" {
-				value := strings.Trim(data[2], " ")
-				field.SetValue(strings.Join([]string{field.Value(), value}, " "))
-			}
+			value := strings.Trim(data[2], " ")
+			field.SetValue(strings.Join([]string{field.Value(), value}, " "))
+
 		} else {
 			err := fmt.Errorf("Unable to parse tag data from line: %s", line)
 			errors = append(errors, err)

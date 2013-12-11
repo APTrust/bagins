@@ -69,7 +69,7 @@ func FileChecksum(filepath string, hsh hash.Hash) (string, error) {
 
 	_, err = io.Copy(hsh, src)
 	if err != nil {
-		panic(err)
+		return "", err
 	}
 	byteSum := hsh.Sum(nil)
 	return fmt.Sprintf("%x", byteSum), nil
