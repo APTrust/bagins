@@ -161,7 +161,7 @@ func parseManifestData(file *os.File) (map[string]string, []error) {
 		line := scanner.Text()
 		if re.MatchString(line) {
 			data := re.FindStringSubmatch(line)
-			values[data[1]] = data[2]
+			values[data[2]] = data[1]
 		} else {
 			errs = append(errs, fmt.Errorf("Unable to parse data from line: %s", line))
 		}

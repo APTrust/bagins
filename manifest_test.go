@@ -46,8 +46,7 @@ func TestReadManifest(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	fmt.Println(mf.Name())
-	// defer os.Remove(mf.Name())
+	defer os.Remove(mf.Name())
 
 	// Open it and read the values.
 	m, errs := bagins.ReadManifest(mf.Name())
@@ -60,10 +59,9 @@ func TestReadManifest(t *testing.T) {
 			t.Errorf("Expected key %s not found in manifest data", fname)
 		}
 		if actual != check {
-			t.Error("Invalid values in manifest.")
+			t.Error("Failed to find file", fname, "in manifest.")
 		}
 	}
-
 }
 
 func TestGetAlgoName(t *testing.T) {
