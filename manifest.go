@@ -19,12 +19,14 @@ import (
 	"strings"
 )
 
-// Manifest represents information about a BagIt manifest file.  As of BagIt spec
-// 0.97 this means only manifest-<algo>.txt and tagmanifest-<algo>.txt files.
-//
-// For more information see:
-//   manifest: http://tools.ietf.org/html/draft-kunze-bagit-09#section-2.1.3
-//   tagmanifest: http://tools.ietf.org/html/draft-kunze-bagit-09#section-2.2.1
+/*
+ Manifest represents information about a BagIt manifest file.  As of BagIt spec
+ 0.97 this means only manifest-<algo>.txt and tagmanifest-<algo>.txt files.
+
+ For more information see:
+   manifest: http://tools.ietf.org/html/draft-kunze-bagit-09#section-2.1.3
+   tagmanifest: http://tools.ietf.org/html/draft-kunze-bagit-09#section-2.2.1
+*/
 type Manifest struct {
 	name string            // Path to the
 	Data map[string]string // Map of filepath key and checksum value for that file
@@ -47,6 +49,11 @@ func NewManifest(pth string, chkAlgo *bagutil.ChecksumAlgorithm) (*Manifest, err
 	return m, nil
 }
 
+/*
+  Opens a manifest file, parses attemps to parse the hashtype from the filename, parses
+  the file contents and returns a pointer to a Manifest.  Error slice may comprise multiple
+  parsing errors when attempting to read data for fault tolerance.
+*/
 func ReadManifest(name string) (*Manifest, []error) {
 	var errs []error
 
@@ -80,20 +87,23 @@ func ReadManifest(name string) (*Manifest, []error) {
 
 }
 
+/*
+  Calculates a checksum for files listed in the manifest and compares it to the value
+  stored in manifest file.  Returns an error for each file that fails the fixity check.
+*/
 func (m *Manifest) RunChecksums() []error {
-	invalidSums := make([]error, 0)
+	var invalidSums []error
+
 	for key, sum := range m.Data {
 		fileChecksum, err := bagutil.FileChecksum(key, m.algo.New())
-		if sum == "" {
-			m.Data[key] = fileChecksum
-		}
-		if sum != "" && sum != fileChecksum {
-			invalidSums = append(invalidSums, errors.New(fmt.Sprintln("File checkum is not valid for", key, "!")))
+		if sum != fileChecksum {
+			invalidSums = append(invalidSums, fmt.Errorf("File checkum is not valid for %s", key))
 		}
 		if err != nil {
 			invalidSums = append(invalidSums, err)
 		}
 	}
+
 	return invalidSums
 }
 

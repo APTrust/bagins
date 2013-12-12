@@ -83,17 +83,17 @@ func TestRunChecksums(t *testing.T) {
 
 	chk, _ := bagutil.NewCheckByName("sha1")
 	mfst, _ := bagins.NewManifest(os.TempDir(), chk)
-	mfst.Data[testFile.Name()] = ""
-	mfst.RunChecksums()
+	mfst.Data[testFile.Name()] = "da909ba395016f2a64b04d706520db6afa74fc95"
+	errList := mfst.RunChecksums()
 
 	// Checksum for file should now be generated.
-	if mfst.Data[testFile.Name()] != "da909ba395016f2a64b04d706520db6afa74fc95" {
-		t.Error("File checksum not accurantly generated!")
+	if len(errList) != 0 {
+		t.Error("Checksums not matching as expected!")
 	}
 
 	// Check that it throws an error if mismatch checksum.
 	mfst.Data[testFile.Name()] = "frodo lives!"
-	errList := mfst.RunChecksums()
+	errList = mfst.RunChecksums()
 	if len(errList) == 0 {
 		t.Error("Invalid Checksums not being detected!")
 	}

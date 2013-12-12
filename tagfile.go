@@ -21,10 +21,12 @@ import (
 
 // TAG FIELD
 
-// Represents a tag field as referenced in the standard BagIt tag file and used
-// in bag-info.txt.  It represents a standard key value pair with the label with corresponding
-// value.  For more information see
-// http://tools.ietf.org/html/draft-kunze-bagit-09#section-2.2.2
+/*
+ Represents a tag field as referenced in the standard BagIt tag file and used
+ in bag-info.txt.  It represents a standard key value pair with the label with corresponding
+ value.  For more information see
+ http://tools.ietf.org/html/draft-kunze-bagit-09#section-2.2.2
+*/
 type TagField struct {
 	label string // Name of the tag field
 	value string // Value of the tag field
@@ -57,9 +59,11 @@ func (f *TagField) SetValue(v string) {
 
 // TAG FIELD LIST
 
-// Represents an ordered list of tag fields as specified for use with bag-info.txt
-// in the bag it standard.  It supports ordered, repeatable fields.
-// http://tools.ietf.org/html/draft-kunze-bagit-09#section-2.2.2
+/*
+ Represents an ordered list of tag fields as specified for use with bag-info.txt
+ in the bag it standard.  It supports ordered, repeatable fields.
+ http://tools.ietf.org/html/draft-kunze-bagit-09#section-2.2.2
+*/
 type TagFieldList struct {
 	fields []TagField // Some useful manipulations in https://code.google.com/p/go-wiki/wiki/SliceTricks
 }
@@ -69,7 +73,7 @@ func NewTagFieldList() *TagFieldList {
 	return new(TagFieldList)
 }
 
-// Returns a copy of an slice of the current tag fields.
+// Returns a slice copy of the current tag fields.
 func (fl *TagFieldList) Fields() []TagField {
 	return fl.fields
 }
@@ -84,8 +88,10 @@ func (fl *TagFieldList) AddField(field TagField) {
 	fl.fields = append(fl.Fields(), field)
 }
 
-// Removes a field from the tag field list at the specified index.  Returns an error if
-// index out of bounds.
+/*
+ Removes a field from the tag field list at the specified index.  Returns an error if
+ index out of bounds.
+*/
 func (fl *TagFieldList) RemoveField(i int) error {
 	if i+1 > len(fl.Fields()) || i < 0 {
 		return errors.New("Invalid index for TagField")
@@ -106,8 +112,10 @@ type TagFile struct {
 	Data *TagFieldList // key value pairs of data for the tagfile.
 }
 
-// Creates a new tagfile object and returns it or returns an error if improperly formatted.
-// The name argument represents the filepath of the tagfile, which must end in txt
+/*
+ Creates a new tagfile object and returns it or returns an error if improperly formatted.
+ The name argument represents the filepath of the tagfile, which must end in txt
+*/
 func NewTagFile(name string) (tf *TagFile, err error) {
 	err = validateTagFileName(name)
 	tf = new(TagFile)
@@ -116,10 +124,13 @@ func NewTagFile(name string) (tf *TagFile, err error) {
 	return tf, err
 }
 
-// Reads a tagfile, parsing the contents as tagfile field data and returning the TagFile object.
-// name is the filepath to the tag file.  It throws an error if contents cannot be properly parsed.
+/*
+ Reads a tagfile, parsing the contents as tagfile field data and returning the TagFile object.
+ name is the filepath to the tag file.  It throws an error if contents cannot be properly parsed.
+*/
 func ReadTagFile(name string) (*TagFile, []error) {
 	var errs []error
+
 	file, err := os.Open(name)
 	if err != nil {
 		return nil, append(errs, err)
@@ -130,8 +141,10 @@ func ReadTagFile(name string) (*TagFile, []error) {
 	if err != nil {
 		return nil, append(errs, err)
 	}
+
 	data, errs := parseTagFields(file)
 	tf.Data.SetFields(data)
+
 	return tf, errs
 }
 
@@ -140,8 +153,10 @@ func (tf *TagFile) Name() string {
 	return tf.name
 }
 
-// Creates the named tagfile and writes key value pairs to it, with indented
-// formatting as indicated in the BagIt spec.
+/*
+ Creates the named tagfile and writes key value pairs to it, with indented
+ formatting as indicated in the BagIt spec.
+*/
 func (tf *TagFile) Create() error {
 	// Create directory if needed.
 	if err := os.MkdirAll(filepath.Dir(tf.name), 0777); err != nil {
@@ -149,7 +164,7 @@ func (tf *TagFile) Create() error {
 	}
 
 	// Create the tagfile.
-	fileOut, err := os.Create(tf.name)
+	fileOut, err := os.Create(tf.Name())
 	if err != nil {
 		return err
 	}
@@ -166,6 +181,7 @@ func (tf *TagFile) Create() error {
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -200,6 +216,7 @@ func FormatField(key string, data string) (string, error) {
 		splitCounter += writeLen
 
 	}
+
 	return buff.String(), nil
 }
 
@@ -213,8 +230,10 @@ func validateTagFileName(name string) (err error) {
 	return err
 }
 
-// Reads the contents of file and parses tagfile fields from the contents or returns an error if
-// it contains unparsable data.
+/*
+ Reads the contents of file and parses tagfile fields from the contents or returns an error if
+ it contains unparsable data.
+*/
 func parseTagFields(file *os.File) ([]TagField, []error) {
 	var errors []error
 	re, err := regexp.Compile(`^(\S*\:)?(\s.*)?$`)
