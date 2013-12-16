@@ -102,6 +102,10 @@ func (b *Bag) createBagItFile() (*TagFile, error) {
 	return bagit, nil
 }
 
+func ReadBag(pth string) (*Bag, []error) {
+
+}
+
 // METHODS FOR MANAGING BAG PAYLOADS
 
 // Adds a file specified by src parameter to the data directory under

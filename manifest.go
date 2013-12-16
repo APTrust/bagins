@@ -57,7 +57,7 @@ func NewManifest(pth string, chkAlgo *bagutil.ChecksumAlgorithm) (*Manifest, err
 func ReadManifest(name string) (*Manifest, []error) {
 	var errs []error
 
-	algo, err := GetAlgoName(name)
+	algo, err := parseAlgoName(name)
 	if err != nil {
 		return nil, append(errs, err)
 	}
@@ -143,7 +143,7 @@ func (m *Manifest) Name() string {
 
 // Tries to parse the algorithm name from a manifest filename.  Returns
 // an error if unable to do so.
-func GetAlgoName(name string) (string, error) {
+func parseAlgoName(name string) (string, error) {
 	filename := filepath.Base(name)
 	re, err := regexp.Compile(`(^.*\-)(.*)(\..*$)`)
 	if err != nil {

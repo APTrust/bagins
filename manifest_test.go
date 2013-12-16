@@ -64,18 +64,6 @@ func TestReadManifest(t *testing.T) {
 	}
 }
 
-func TestGetAlgoName(t *testing.T) {
-	tst := make([]string, 0)
-	tst = append(tst, filepath.Join(os.TempDir(), "_GOTEST_manifest-sha1.txt"))
-	tst = append(tst, filepath.Join(os.TempDir(), "_GOTEST_manifest-md5-sha1.txt"))
-	for i := range tst {
-		name, _ := bagins.GetAlgoName(tst[i])
-		if name != "sha1" {
-			t.Error("AlgoName returned", name, "but expected sha1")
-		}
-	}
-}
-
 func TestRunChecksums(t *testing.T) {
 	testFile, _ := ioutil.TempFile("", "_GOTEST_")
 	testFile.WriteString("Test the checksum")
