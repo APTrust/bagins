@@ -102,9 +102,9 @@ func (b *Bag) createBagItFile() (*TagFile, error) {
 	return bagit, nil
 }
 
-func ReadBag(pth string) (*Bag, []error) {
+// func ReadBag(pth string) (*Bag, []error) {
 
-}
+// }
 
 // METHODS FOR MANAGING BAG PAYLOADS
 

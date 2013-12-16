@@ -25,6 +25,23 @@ func TestNewManifest(t *testing.T) {
 }
 
 func TestReadManifest(t *testing.T) {
+
+	// Setup a bad manifest name
+	badpth := filepath.Join(os.TempDir(), "__GOTEST__BADMANIFEST_manifest-sha156.txt")
+	badfile, err := os.Create(badpth)
+	if err != nil {
+		t.Error(err)
+	}
+	badfile.Close()
+	defer os.Remove(badpth)
+
+	// It should
+	_, errs := bagins.ReadManifest(badpth)
+	if len(errs) != 1 {
+		t.Error("Did not raise error as expected when trying to read bad manifest filename", badpth)
+	}
+
+	// Setup a good manfiest file for tests that should pass.
 	exp := make(map[string]string)
 	for i := 0; i < 40; i++ {
 		check := fmt.Sprintf("%x", rand.Int31())
@@ -32,7 +49,7 @@ func TestReadManifest(t *testing.T) {
 		exp[fname] = check
 	}
 
-	// Setup a test manifest
+	// Setup a good test manifest
 	h, err := bagutil.NewCheckByName("md5")
 	if err != nil {
 		t.Error(err)
@@ -48,7 +65,7 @@ func TestReadManifest(t *testing.T) {
 	}
 	defer os.Remove(mf.Name())
 
-	// Open it and read the values.
+	// It should open it and read the values inside without errors.
 	m, errs := bagins.ReadManifest(mf.Name())
 	if len(errs) != 0 {
 		t.Error(errs)
