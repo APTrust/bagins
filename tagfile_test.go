@@ -218,15 +218,3 @@ func TestTagFileCreate(t *testing.T) {
 	}
 	os.RemoveAll(filepath.Dir(testPath))
 }
-
-func TestFormatField(t *testing.T) {
-	resultString, err := bagins.FormatField("tst", strings.Repeat("test ", 20))
-	if err != nil {
-		t.Error(err)
-	}
-	exp := 80
-	act := strings.Index(resultString, "\n")
-	if exp != act {
-		t.Errorf("Found newline at %d but expected %d", act, exp)
-	}
-}

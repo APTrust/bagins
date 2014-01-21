@@ -11,8 +11,13 @@ import (
 	"testing"
 )
 
+const (
+	FIXSTRING string = "The quick brown fox jumps over the lazy dog."
+	FIXVALUE  string = "e4d909c290d0fb1ca068ffaddf22cbd0"
+)
+
 func setupTestBag(bagName string) (*bagins.Bag, error) {
-	algo := "sha1"
+	algo := "md5"
 	hsh, _ := bagutil.LookupHashFunc(algo)
 	cs := bagutil.NewChecksumAlgorithm(algo, hsh)
 
@@ -26,7 +31,7 @@ func setupTestBag(bagName string) (*bagins.Bag, error) {
 func TestNewBag(t *testing.T) {
 
 	// Use this ChecksumAlgorithm for the tests.
-	algo := "sha1"
+	algo := "md5"
 	hsh, _ := bagutil.LookupHashFunc(algo)
 	cs := bagutil.NewChecksumAlgorithm(algo, hsh)
 
@@ -65,8 +70,8 @@ func TestNewBag(t *testing.T) {
 		}
 		t.Errorf("bagit.txt does not exist! %s", bi.Name())
 	}
-	if _, err = os.Stat(filepath.Join(os.TempDir(), bagName, "manifest-sha1.txt")); os.IsNotExist(err) {
-		t.Error("manifest-sha1.txt does not exist!")
+	if _, err = os.Stat(filepath.Join(os.TempDir(), bagName, "manifest-md5.txt")); os.IsNotExist(err) {
+		t.Error("manifest-md5.txt does not exist!")
 	}
 }
 
@@ -87,7 +92,7 @@ func TestAddFile(t *testing.T) {
 		t.Errorf("Adding a nonexistant file did not generate an error!")
 	}
 
-	// It should and a file to the data directory and generate a fixity value.
+	// It should add a file to the data directory and generate a fixity value.
 	expFile := "my/nested/dir/mytestfile.txt"
 	if err := bag.AddFile(fi.Name(), expFile); err != nil {
 		t.Error(err)
@@ -100,13 +105,13 @@ func TestAddFile(t *testing.T) {
 	}
 
 	// It should have calulated the fixity and put it in the manifest.
-	mf, _ := bag.Manifest()
+	mf := bag.Manifest
 	expKey := filepath.Join("data", expFile)
 	fx, ok := mf.Data[expKey]
 	if !ok {
 		t.Error("Unable to find entry in manfest: ", expKey)
 	}
-	if len(fx) != 40 {
+	if len(fx) != 32 {
 		t.Errorf("Expected %d character fixity but returned: %d", 32, len(fx))
 	}
 }
@@ -117,10 +122,10 @@ func TestAddDir(t *testing.T) {
 	srcDir, _ := ioutil.TempDir("", "_GOTEST_PAYLOAD_SRC_")
 	for i := 0; i < 50; i++ {
 		fi, _ := ioutil.TempFile(srcDir, "TEST_GO_ADDFILE_")
-		fi.WriteString("Test the checksum")
+		fi.WriteString(FIXSTRING)
 		fi.Close()
 	}
-	defer os.RemoveAll(srcDir)
+	// defer os.RemoveAll(srcDir)
 
 	// Setup the test bag
 	bag, _ := setupTestBag("_GOTEST_BAG_ADDDIR_")
@@ -132,25 +137,13 @@ func TestAddDir(t *testing.T) {
 	}
 
 	// It should produce 50 manifest entries
-
-	// It should generate entries in the manifest
-	mf, _ := bag.Manifest()
-
-	// It should produce 50 manifest entries
-	if len(mf.Data) != 50 {
-		t.Error("Expected 50 manifest entries but returned", len(mf.Data))
+	if len(bag.Manifest.Data) != 50 {
+		t.Error("Expected 50 manifest entries but returned", len(bag.Manifest.Data))
 	}
 	// It should contain the proper checksums for each file.
-	for key, fx := range mf.Data {
-		expFx := "da909ba395016f2a64b04d706520db6afa74fc95"
-		expPfx := filepath.Join("data", "TEST_GO_ADDFILE_")
-
-		if fx != expFx {
-			t.Error("Fixity error!", fx, "does not match expected", expFx)
-		}
-		if !strings.HasPrefix(key, expPfx) {
-			t.Error(key, "does not start with", expPfx)
-		}
+	errs := bag.Manifest.RunChecksums()
+	for _, err := range errs {
+		t.Errorf("%s", err)
 	}
 }
 
@@ -161,11 +154,8 @@ func TestManifest(t *testing.T) {
 	defer os.RemoveAll(bag.Path())
 
 	// It should have the expected name and return no error.
-	mf, err := bag.Manifest()
-	if err != nil {
-		t.Error(err)
-	}
-	exp := "manifest-sha1.txt"
+	mf := bag.Manifest
+	exp := "manifest-md5.txt"
 	if filepath.Base(mf.Name()) != exp {
 		t.Error("Expected manifest name", exp, "but returned", filepath.Base(mf.Name()))
 	}
@@ -249,8 +239,7 @@ func TestClose(t *testing.T) {
 	defer os.RemoveAll(bag.Path())
 
 	// Add some data to the manifest and make sure it writes it on close.
-	mf, _ := bag.Manifest()
-	mf.Data["data/fakefile.txt"] = "da909ba395016f2a64b04d706520db6afa74fc95"
+	bag.Manifest.Data["data/fakefile.txt"] = "da909ba395016f2a64b04d706520db6afa74fc95"
 
 	// It should not throw an error.
 	if errs := bag.Close(); len(errs) != 0 {
@@ -260,7 +249,7 @@ func TestClose(t *testing.T) {
 	}
 
 	// The manifest file should contain data.
-	content, err := ioutil.ReadFile(mf.Name())
+	content, err := ioutil.ReadFile(bag.Manifest.Name())
 	if err != nil {
 		t.Error(err)
 	}
@@ -293,10 +282,10 @@ func TestClose(t *testing.T) {
 	}
 }
 
-func TestContents(t *testing.T) {
+func TestListFiles(t *testing.T) {
 
 	// Setup the test bag.
-	bag, _ := setupTestBag("_GOTEST_BAG_CONTENTS_")
+	bag, _ := setupTestBag("_GOTEST_BAG_LISTFILES_")
 	defer os.RemoveAll(bag.Path())
 
 	// Setup the test file to add for the test.
@@ -305,11 +294,11 @@ func TestContents(t *testing.T) {
 	fi.Close()
 
 	expFiles := make(map[string]bool)
-	expFiles["manifest-sha1.txt"] = true
+	expFiles["manifest-md5.txt"] = true
 	expFiles["bagit.txt"] = true
 	expFiles[filepath.Join("data", "TEST_GO_DATAFILE.txt")] = true
 
-	cn, _ := bag.Contents()
+	cn, _ := bag.ListFiles()
 
 	for _, fName := range cn {
 		if _, ok := expFiles[fName]; !ok {
@@ -318,9 +307,12 @@ func TestContents(t *testing.T) {
 	}
 }
 
-func TestFileManifest(t *testing.T) {
+func TestTrackedFiles(t *testing.T) {
 	// Setup the test bag.
-	bag, _ := setupTestBag("_GOTEST_BAG_FILEMANIFEST_")
+	bag, err := setupTestBag("_GOTEST_BAG_TRACKEDFILES_")
+	if err != nil {
+		t.Error(err)
+	}
 	defer os.RemoveAll(bag.Path())
 
 	// Setup the test file to add for the test.
@@ -333,8 +325,8 @@ func TestFileManifest(t *testing.T) {
 	expFiles["manifest-sha1.txt"] = true
 	expFiles["bagit.txt"] = true
 
-	fm, _ := bag.FileManifest()
-	for _, f := range fm {
+	bagFiles := bag.TrackedFiles()
+	for _, f := range bagFiles {
 		if f == dfPath {
 			t.Error("Detecting file it should not:", dfPath)
 		}
@@ -344,7 +336,7 @@ func TestFileManifest(t *testing.T) {
 	}
 }
 
-func TestInventory(t *testing.T) {
+func TestConfirmFiles(t *testing.T) {
 
 	// Setup the test file to add for the test.
 	fi, _ := ioutil.TempFile("", "TEST_GO_ADDFILE_")
@@ -357,33 +349,23 @@ func TestInventory(t *testing.T) {
 	defer os.RemoveAll(bag.Path())
 
 	// It should not throw an error.
-	if err := bag.Inventory(); len(err) > 0 {
+	if err := bag.ConfirmFiles(); len(err) > 0 {
 		t.Errorf("Initial Bag Creation: %v", err)
 	}
 
 	// It should not throw an error for an added tag file.
 	fn := "test_tagfile.txt"
 	bag.AddTagfile(fn)
-	if err := bag.Inventory(); len(err) > 0 {
+	if err := bag.ConfirmFiles(); len(err) > 0 {
 		t.Error(err)
 	}
 
 	// It should thrown an error if tagfile is remove.
 	os.Remove(filepath.Join(bag.Path(), fn))
-	if errs := bag.Inventory(); len(errs) < 1 {
+	if errs := bag.ConfirmFiles(); len(errs) < 1 {
 		t.Error("Does not detect when a tag file has been deleted!")
 	}
 	bag.Close() // rewrites and tagfile.
-
-	// setup a bag manifest entry.
-	mf, _ := bag.Manifest()
-	pfName := filepath.Join("data", filepath.Base(fi.Name()))
-	mf.Data[pfName] = ""
-
-	// It should throw an error when unable to find manifest entry.
-	if errs := bag.Inventory(); len(errs) < 1 {
-		t.Error("Not detecting a missiong file in the payload:")
-	}
 
 	// It should not throw an error when the file is actually added.
 	err := bag.AddFile(fi.Name(), filepath.Base(fi.Name()))
@@ -392,7 +374,7 @@ func TestInventory(t *testing.T) {
 	}
 	bag.Close()
 
-	if errs := bag.Inventory(); len(errs) > 0 {
+	if errs := bag.ConfirmFiles(); len(errs) > 0 {
 		t.Error("Incorrectly reads a payload file as missing:", filepath.Base(fi.Name()))
 	}
 }
@@ -424,27 +406,27 @@ func TestOrphan(t *testing.T) {
 
 	// It should find an orphan.
 	if oList := bag.Orphans(); len(oList) < 1 {
-		inv, _ := bag.FileManifest()
+		inv := bag.TrackedFiles()
 		fmt.Println(inv)
-		cnt, _ := bag.Contents()
+		cnt, _ := bag.ListFiles()
 		fmt.Println(cnt)
 		fmt.Println(oList)
 		t.Error("Did not detect orphan tagfile:", oFi.Name())
 	}
 
-	// bag.AddTagfile("orphan_file.txt")
-	// // It should not find an orphan.
-	// if oList := bag.Orphans(); len(oList) > 0 {
-	// 	t.Error("Unexpected Orphan File(s):", strings.Join(oList, "\n"))
-	// }
+	bag.AddTagfile("orphan_file.txt")
+	// It should not find an orphan.
+	if oList := bag.Orphans(); len(oList) > 0 {
+		t.Error("Unexpected Orphan File(s):", strings.Join(oList, "\n"))
+	}
 
-	// // Setup orphan datafile
-	// odFi, _ := os.Create(filepath.Join(bag.Path(), "data", "orphan_datafile.txt"))
-	// oFi.Close()
+	// Setup orphan datafile
+	odFi, _ := os.Create(filepath.Join(bag.Path(), "data", "orphan_datafile.txt"))
+	oFi.Close()
 
-	// //it should find an orphan.
-	// if oList := bag.Orphans(); len(oList) < 0 {
-	// 	t.Error("Did not detect orphan tagfile:", odFi.Name())
-	// }
+	//it should find an orphan.
+	if oList := bag.Orphans(); len(oList) < 0 {
+		t.Error("Did not detect orphan tagfile:", odFi.Name())
+	}
 
 }

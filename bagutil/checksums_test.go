@@ -7,12 +7,20 @@ import (
 	"testing"
 )
 
-var testAlgos []string = []string{"sha1", "sha256", "md5"}
+var test_list map[string]string = map[string]string{
+	"md5":    "9e107d9d372bb6826bd81d3542a419d6",
+	"sha1":   "2fd4e1c67a2d28fced849ee1bb76e7391b93eb12",
+	"sha256": "d7a8fbb307d7809469ca9abcb0082e4f8d5651e46d3cdb762d02d0bf37c9e592",
+	"sha512": "07e547d9586f6a73f73fbac0435ed76951218fb7d0c8d788a309d785436bbb642e93a252a954f23912547d1e8a3b5ed6e1bfd7097821233fa0538f3db854fee6",
+	"sha224": "730e109bd7a8a32b1cb9d9a09aa2325d2430587ddbc0c38bad911525",
+	"sha384": "ca737f1014a48f4c0b6dd43cb177b0afd9e5169367544c494011e3317dbf9a509cb1e5dc1e85a941bbee3d7f2afbc9b1",
+}
+var test_string string = "The quick brown fox jumps over the lazy dog"
 
 func TestNewChecksumAlgorithm(t *testing.T) {
-	for idx := range testAlgos {
-		hsh, _ := LookupHashFunc(testAlgos[idx])
-		chkAlgo := NewChecksumAlgorithm(testAlgos[idx], hsh)
+	for key, _ := range test_list {
+		hsh, _ := LookupHash(key)
+		chkAlgo := NewChecksumAlgorithm(key, hsh)
 		if chkAlgo == nil {
 			t.Error("Returned nil for check algorithm")
 		}
@@ -20,8 +28,8 @@ func TestNewChecksumAlgorithm(t *testing.T) {
 }
 
 func TestNewCheckByName(t *testing.T) {
-	for idx := range testAlgos {
-		_, err := NewCheckByName(testAlgos[idx])
+	for key, _ := range test_list {
+		_, err := NewCheckByName(key)
 		if err != nil {
 			t.Error(err)
 		}
@@ -29,14 +37,10 @@ func TestNewCheckByName(t *testing.T) {
 }
 
 func TestFileChecksum(t *testing.T) {
-	testMap := map[string]string{
-		"sha1": "da909ba395016f2a64b04d706520db6afa74fc95",
-		"md5":  "92d7a9f0f4a30ca782dcae5fe83ca7eb",
-	}
-	testFile, _ := ioutil.TempFile("", "_GO_")
-	testFile.WriteString("Test the checksum")
+	testFile, _ := ioutil.TempFile("", "_GO_TESTFILECHECKSUM_")
+	testFile.WriteString(test_string)
 	testFile.Close()
-	for key, sum := range testMap {
+	for key, sum := range test_list {
 		hsh, _ := LookupHash(key)
 		actual, err := FileChecksum(testFile.Name(), hsh)
 		if err != nil {
@@ -50,10 +54,10 @@ func TestFileChecksum(t *testing.T) {
 }
 
 func TestLookupHash(t *testing.T) {
-	for algo := range testAlgos {
-		hash, _ := LookupHash(testAlgos[algo])
+	for algo, _ := range test_list {
+		hash, _ := LookupHash(algo)
 		if hash == nil {
-			t.Error("Expecting a return for", testAlgos[algo], "but returned nil!")
+			t.Error("Expecting a return for", algo, "but returned nil!")
 		}
 	}
 	nilHash, err := LookupHash("badname")

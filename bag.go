@@ -22,48 +22,46 @@ import (
 	"github.com/APTrust/bagins/bagutil"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // Represents the basic structure of a bag which is controlled by methods.
 type Bag struct {
-	pth       string // the bag is under.
-	payload   *Payload
-	manifests map[string]*Manifest // Algo string as key.
-	tagfiles  map[string]*TagFile  // relative path to bag as key,
-	cs        *bagutil.ChecksumAlgorithm
+	pth      string // the bag is under.
+	payload  *Payload
+	Manifest *Manifest           // relative path in bag as key.
+	tagfiles map[string]*TagFile // relative path in bag as key,
 }
 
 // METHODS FOR CREATING AND INITALIZING BAGS
 
-// Creates a new bag under the location directory and creates a bag root directory
-// with the provided name.  Returns an error if the location does not exist or if the
-// bag already exist.
-//
-// example:
-//		hsh, _ := bagutil.LookupHashFunc("sha256")
-//		cs := bagutil.NewChecksumAlgorithm("sha256", hsh)
-// 		NewBag("archive/bags", "bag-34323", cs)
-func NewBag(location string, name string, cs *bagutil.ChecksumAlgorithm) (*Bag, error) {
-	// Start with creating the directories.
-	bagPath := filepath.Join(location, name)
-	err := os.Mkdir(bagPath, 0755)
-	if err != nil {
-		return nil, err
-	}
+/*
+ Creates a new bag under the location directory and creates a bag root directory
+ with the provided name.  Returns an error if the location does not exist or if the
+ bag already exist.
 
+ example:
+		hsh, _ := bagutil.LookupHashFunc("sha256")
+		cs := bagutil.NewChecksumAlgorithm("sha256", hsh)
+ 		NewBag("archive/bags", "bag-34323", cs)
+*/
+func NewBag(location string, name string, cs *bagutil.ChecksumAlgorithm) (*Bag, error) {
 	// Create the bag object.
 	bag := new(Bag)
-	defer bag.Close()
-	bag.pth = bagPath
-	bag.cs = cs
-	bag.manifests = make(map[string]*Manifest)
 
-	// Init the manifests map and create the root manifest
-	mf, err := NewManifest(bag.Path(), cs)
+	// Start with creating the directories.
+	bag.pth = filepath.Join(location, name)
+	err := os.Mkdir(bag.pth, 0755)
 	if err != nil {
 		return nil, err
 	}
-	bag.manifests[cs.Name()] = mf
+	defer bag.Close()
+
+	// Init the manifests map and create the root manifest
+	bag.Manifest, err = NewManifest(bag.Path(), cs)
+	if err != nil {
+		return nil, err
+	}
 
 	// Init the payload directory and such.
 	plPath := filepath.Join(bag.Path(), "data")
@@ -99,6 +97,7 @@ func (b *Bag) createBagItFile() (*TagFile, error) {
 	}
 	bagit.Data.AddField(*NewTagField("BagIt-Version", "0.97"))
 	bagit.Data.AddField(*NewTagField("Tag-File-Character-Encoding", "UTF-8"))
+
 	return bagit, nil
 }
 
@@ -108,18 +107,20 @@ func (b *Bag) createBagItFile() (*TagFile, error) {
 
 // METHODS FOR MANAGING BAG PAYLOADS
 
-// Adds a file specified by src parameter to the data directory under
-// the relative path and filename provided in the dst parameter.
-// example:
-//			err := b.AddFile("/tmp/myfile.txt", "myfile.txt")
+/*
+  Adds a file specified by src parameter to the data directory under
+  the relative path and filename provided in the dst parameter.
+  example:
+			err := b.AddFile("/tmp/myfile.txt", "myfile.txt")
+*/
 func (b *Bag) AddFile(src string, dst string) error {
-	fx, err := b.payload.Add(src, dst, b.cs.New())
+	fx, err := b.payload.Add(src, dst, b.Manifest.algo.New())
 	if err != nil {
 		return err
 	}
-	if mf, err := b.Manifest(); err == nil {
-		mf.Data[filepath.Join("data", dst)] = fx
-	}
+
+	b.Manifest.Data[filepath.Join("data", dst)] = fx
+
 	return err
 }
 
@@ -128,37 +129,23 @@ func (b *Bag) AddFile(src string, dst string) error {
 // example:
 //			errs := b.AddDir("/tmp/mypreservationfiles")
 func (b *Bag) AddDir(src string) (errs []error) {
-	data, errs := b.payload.AddAll(src, b.cs.Algo())
-	mf, err := b.Manifest()
-	if err != nil {
-		errs = append(errs, err)
-	}
+	data, errs := b.payload.AddAll(src, b.Manifest.algo.New())
+
 	for key := range data {
-		mf.Data[filepath.Join("data", key)] = data[key]
+		b.Manifest.Data[filepath.Join("data", key)] = data[key]
 	}
 	return errs
 }
 
-// METHODS FOR MANAGING BAG MANIFESTS
-
-// Returns the default manifest of the bag as determined by its
-// checksum algorithm.
-// example:
-// 			mf, err := b.Manifest()
-func (b *Bag) Manifest() (*Manifest, error) {
-	if mf, ok := b.manifests[b.cs.Name()]; ok {
-		return mf, nil
-	}
-	return nil, fmt.Errorf("Unable to find manifest-%s.txt", b.cs.Name())
-}
-
 // METHODS FOR MANAGING BAG TAG FILES
 
-// Adds a tagfile to the bag with the filename provided,
-// creating whatever subdirectories are needed if supplied
-// as part of name parameter.
-// example:
-// 			err := b.AddTagfile("baginfo.txt")
+/*
+ Adds a tagfile to the bag with the filename provided,
+ creating whatever subdirectories are needed if supplied
+ as part of name parameter.
+ example:
+ 			err := b.AddTagfile("baginfo.txt")
+*/
 func (b *Bag) AddTagfile(name string) error {
 	tagPath := filepath.Join(b.Path(), name)
 	if err := os.MkdirAll(filepath.Dir(tagPath), 0766); err != nil {
@@ -175,9 +162,11 @@ func (b *Bag) AddTagfile(name string) error {
 	return nil
 }
 
-// Finds a tagfile in by its relative path to the bag root directory.
-// example:
-//			tf, err := b.TagFile("bag-info.txt")
+/*
+ Finds a tagfile in by its relative path to the bag root directory.
+ example:
+			tf, err := b.TagFile("bag-info.txt")
+*/
 func (b *Bag) TagFile(name string) (*TagFile, error) {
 	if tf, ok := b.tagfiles[name]; ok {
 		return tf, nil
@@ -185,9 +174,11 @@ func (b *Bag) TagFile(name string) (*TagFile, error) {
 	return nil, fmt.Errorf("Unable to find tagfile %s", name)
 }
 
-// Convienence method to return the bag-info.txt tag file if it exists.  Since
-// this is optional it will not be created by default and will return an error
-// if you have not defined or added it yourself via Bag.AddTagfile
+/*
+ Convienence method to return the bag-info.txt tag file if it exists.  Since
+ this is optional it will not be created by default and will return an error
+ if you have not defined or added it yourself via Bag.AddTagfile
+*/
 func (b *Bag) BagInfo() (*TagFile, error) {
 	tf, err := b.TagFile("bag-info.txt")
 	if err != nil {
@@ -207,14 +198,14 @@ func (b *Bag) Path() string {
 	return b.pth
 }
 
-// This method writes all the relevant tag and manifest files to finish off the
-// bag.
+/*
+ This method writes all the relevant tag and manifest files to finish off the
+ bag.
+*/
 func (b *Bag) Close() (errs []error) {
 	// Write all the manifest files.
-	for _, mf := range b.manifests {
-		if err := mf.Create(); err != nil {
-			errs = append(errs, err)
-		}
+	if err := b.Manifest.Create(); err != nil {
+		errs = append(errs, err)
 	}
 
 	// TODO Write all the tag files.
@@ -229,95 +220,95 @@ func (b *Bag) Close() (errs []error) {
 	return
 }
 
-// Walks the bag directory and subdirectories and returns the
-// filepaths found inside and any errors.
-func (b *Bag) Contents() ([]string, []error) {
+/*
+ Walks the bag directory and subdirectories and returns the
+ filepaths found inside and any errors skipping files in the
+ payload directory.
+*/
+func (b *Bag) ListFiles() ([]string, error) {
 
-	fList := []string{}
-	eList := []error{}
+	var files []string
 
 	// WalkDir function to collect files in the bag..
 	visit := func(pth string, info os.FileInfo, err error) error {
 		if err != nil {
-			eList = append(eList, err)
+			return err
 		}
-		if !info.IsDir() {
+
+		isPayload := strings.HasPrefix(pth, b.payload.Name())
+		if !info.IsDir() || !isPayload {
 			fp, err := filepath.Rel(b.Path(), pth)
 			if err != nil {
 				return err
 			}
-			fList = append(fList, fp)
+			if fp != "." {
+				files = append(files, fp)
+			}
 		}
 		return err
 	}
 
 	if err := filepath.Walk(b.Path(), visit); err != nil {
-		eList = append(eList, err)
+		return nil, err
 	}
 
-	return fList, eList
+	return files, nil
 }
 
-// Returns all the filepaths for all files being tracked by the bag.
-// This includes the list of manifests, tags and files in the data directory.
-// TODO:  Remove the error slice
-func (b *Bag) FileManifest() ([]string, []error) {
+/*
+ Returns the filepaths for all files being tracked by the bag object that are
+ not part of the payload. This includes the list of manifests and tagsfiles.
+*/
+func (b *Bag) TrackedFiles() []string {
 
-	fList := []string{}
-	eList := []error{}
+	var files []string
 
-	for fPath, _ := range b.tagfiles {
-		fList = append(fList, fPath)
+	for tf, _ := range b.tagfiles {
+		files = append(files, tf)
 	}
 
-	mf, _ := b.Manifest()
-	for fPath, _ := range mf.Data {
-		fList = append(fList, fPath)
+	if mPath, err := filepath.Rel(b.Path(), b.Manifest.Name()); err != nil {
+		files = append(files, mPath)
 	}
-	// Confirm Manifest files are there.
-	for _, mf := range b.manifests {
-		fPath := filepath.Base(mf.Name())
-		fList = append(fList, fPath)
-	}
-
-	return fList, eList
+	return files
 }
 
-// Checks that the bag actually contains all the files it expect to and returns
-// slice of errors indicating the ones that don't.
-func (b *Bag) Inventory() []error {
-	// Confirm Tagfiles are there.
+/*
+ Checks that the bag actually contains all the files it expects to and returns
+ slice of errors indicating the ones that don't.
+*/
+func (b *Bag) ConfirmFiles() []error {
+	var errs []error
 
-	fls, errs := b.FileManifest()
-	if len(errs) > 0 {
-		return errs
-	}
+	files := b.TrackedFiles()
 
-	for _, fl := range fls {
-		if _, err := os.Stat(filepath.Join(b.Path(), fl)); os.IsNotExist(err) {
-			errs = append(errs, fmt.Errorf("Unable to find: %v", fl))
+	for _, f := range files {
+		if _, err := os.Stat(filepath.Join(b.Path(), f)); os.IsNotExist(err) {
+			errs = append(errs, fmt.Errorf("Unable to find: %v", f))
 		}
 	}
 
 	return errs
 }
 
-// Method returns the filepath of any files appearing in Bag.Contents that are
-// not found in Bag.FileManifest
+/*
+ Method returns the filepath of any files appearing in Bag.ListFiles that are
+ not found in Bag.TrackedFiles
+*/
 func (b *Bag) Orphans() []string {
 
-	oList := []string{}
+	var oList []string
 	// Make map to compare contents to.
-	mf, _ := b.FileManifest()
+	tracked := b.TrackedFiles()
 	fMap := make(map[string]bool)
-	for _, fn := range mf {
+	for _, fn := range tracked {
 		fMap[fn] = true
 	}
 
-	cn, _ := b.Contents()
-	for _, fn := range cn {
-		if _, ok := fMap[fn]; !ok {
-			oList = append(oList, fn)
+	files, _ := b.ListFiles()
+	for _, f := range files {
+		if _, ok := fMap[f]; !ok {
+			oList = append(oList, f)
 		}
 	}
 

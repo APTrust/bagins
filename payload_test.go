@@ -89,7 +89,7 @@ func TestPayloadAddAll(t *testing.T) {
 	}
 
 	p, _ := bagins.NewPayload(pDir)
-	fxs, errs := p.AddAll(srcDir, md5.New)
+	fxs, errs := p.AddAll(srcDir, md5.New())
 
 	// It should not return an error.
 	if errs != nil {
@@ -152,7 +152,7 @@ func BenchmarkPayload(b *testing.B) {
 
 	p, _ := bagins.NewPayload(pDir)
 
-	fxs, err := p.AddAll(srcDir, crypto.MD5.New)
+	fxs, err := p.AddAll(srcDir, crypto.MD5.New())
 	if err != nil {
 		b.Error(err)
 	}

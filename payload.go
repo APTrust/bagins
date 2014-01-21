@@ -77,7 +77,7 @@ func (p *Payload) Add(srcPath string, dstPath string, hsh hash.Hash) (string, er
 // Performs an add on every file under the directory supplied to the
 // method.  Returns a map of the filenames and its fixity value based
 // on the hash function passed and a slice of errors if there were any.
-func (p *Payload) AddAll(src string, hsh func() hash.Hash) (fxs map[string]string, errs []error) {
+func (p *Payload) AddAll(src string, hsh hash.Hash) (fxs map[string]string, errs []error) {
 
 	fxs = make(map[string]string)
 
@@ -99,9 +99,9 @@ func (p *Payload) AddAll(src string, hsh func() hash.Hash) (fxs map[string]strin
 	for idx := range files {
 		queue <- true
 		wg.Add(1)
-		go func(file string, src string, hsh func() hash.Hash) {
+		go func(file string, src string, hsh hash.Hash) {
 			dstPath := strings.TrimPrefix(file, src)
-			fx, err := p.Add(file, dstPath, hsh())
+			fx, err := p.Add(file, dstPath, hsh)
 			if err != nil {
 				errs = append(errs, err)
 			}

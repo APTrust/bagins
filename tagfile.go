@@ -172,7 +172,7 @@ func (tf *TagFile) Create() error {
 
 	// Write fields and data to the file.
 	for _, f := range tf.Data.Fields() {
-		field, err := FormatField(f.Label(), f.Value())
+		field, err := formatField(f.Label(), f.Value())
 		if err != nil {
 			return err
 		}
@@ -189,7 +189,7 @@ func (tf *TagFile) Create() error {
 Takes a tag field key and data and wraps lines at 79 with indented spaces as
 per recommendation in spec.
 */
-func FormatField(key string, data string) (string, error) {
+func formatField(key string, data string) (string, error) {
 	delimeter := "\n   "
 	var buff bytes.Buffer
 
