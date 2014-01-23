@@ -113,7 +113,7 @@ func TestAddDir(t *testing.T) {
 		fi.WriteString(FIXSTRING)
 		fi.Close()
 	}
-	// defer os.RemoveAll(srcDir)
+	defer os.RemoveAll(srcDir)
 
 	// Setup the test bag
 	bag, _ := setupTestBag("_GOTEST_BAG_ADDDIR_")
