@@ -1,7 +1,6 @@
 package bagins_test
 
 import (
-	"crypto"
 	"crypto/md5"
 	"github.com/APTrust/bagins"
 	"github.com/APTrust/bagins/bagutil"
@@ -52,6 +51,7 @@ func TestPayloadName(t *testing.T) {
 
 func TestPayloadAdd(t *testing.T) {
 	pDir, _ := ioutil.TempDir("", "GOTEST_Payload")
+	m, _ := bagins.NewManifest(os.TempDir(), "md5")
 	defer os.RemoveAll(pDir)
 
 	p, err := bagins.NewPayload(pDir)
@@ -64,7 +64,7 @@ func TestPayloadAdd(t *testing.T) {
 	testFile.Close()
 	defer os.Remove(testFile.Name())
 
-	chkSum, err := p.Add(testFile.Name(), filepath.Base(testFile.Name()), md5.New())
+	chkSum, err := p.Add(testFile.Name(), filepath.Base(testFile.Name()), m)
 	if err != nil {
 		t.Error(err)
 	}
@@ -81,6 +81,8 @@ func TestPayloadAddAll(t *testing.T) {
 	pDir, _ := ioutil.TempDir("", "_GOTEST_Payload_")
 	defer os.RemoveAll(pDir)
 
+	m, _ := bagins.NewManifest(os.TempDir(), "md5")
+
 	// Setup test files
 	for i := 0; i < 100; i++ {
 		tstFile, _ := ioutil.TempFile(srcDir, "_GOTEST_FILE_")
@@ -89,7 +91,7 @@ func TestPayloadAddAll(t *testing.T) {
 	}
 
 	p, _ := bagins.NewPayload(pDir)
-	fxs, errs := p.AddAll(srcDir, md5.New())
+	fxs, errs := p.AddAll(srcDir, m)
 
 	// It should not return an error.
 	if errs != nil {
@@ -141,6 +143,8 @@ func BenchmarkPayload(b *testing.B) {
 	pDir, _ := ioutil.TempDir("", "_GOTEST_Payload_")
 	defer os.RemoveAll(pDir)
 
+	m, _ := bagins.NewManifest(os.TempDir(), "md5")
+
 	// Make src temp test files
 	for i := 0; i < 300; i++ {
 		tstFile, _ := ioutil.TempFile(srcDir, "_GOTEST_FILE_")
@@ -152,7 +156,7 @@ func BenchmarkPayload(b *testing.B) {
 
 	p, _ := bagins.NewPayload(pDir)
 
-	fxs, err := p.AddAll(srcDir, crypto.MD5.New())
+	fxs, err := p.AddAll(srcDir, m)
 	if err != nil {
 		b.Error(err)
 	}

@@ -19,7 +19,6 @@ package bagins
 
 import (
 	"fmt"
-	"github.com/APTrust/bagins/bagutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -41,11 +40,9 @@ type Bag struct {
  bag already exist.
 
  example:
-		hsh, _ := bagutil.LookupHashFunc("sha256")
-		cs := bagutil.NewChecksumAlgorithm("sha256", hsh)
- 		NewBag("archive/bags", "bag-34323", cs)
+ 		NewBag("archive/bags", "bag-34323", "sha256")
 */
-func NewBag(location string, name string, cs *bagutil.ChecksumAlgorithm) (*Bag, error) {
+func NewBag(location string, name string, hashName string) (*Bag, error) {
 	// Create the bag object.
 	bag := new(Bag)
 
@@ -58,7 +55,7 @@ func NewBag(location string, name string, cs *bagutil.ChecksumAlgorithm) (*Bag, 
 	defer bag.Close()
 
 	// Init the manifests map and create the root manifest
-	bag.Manifest, err = NewManifest(bag.Path(), cs)
+	bag.Manifest, err = NewManifest(bag.Path(), hashName)
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +111,7 @@ func (b *Bag) createBagItFile() (*TagFile, error) {
 			err := b.AddFile("/tmp/myfile.txt", "myfile.txt")
 */
 func (b *Bag) AddFile(src string, dst string) error {
-	fx, err := b.payload.Add(src, dst, b.Manifest.algo.New())
+	fx, err := b.payload.Add(src, dst, b.Manifest)
 	if err != nil {
 		return err
 	}
@@ -129,7 +126,7 @@ func (b *Bag) AddFile(src string, dst string) error {
 // example:
 //			errs := b.AddDir("/tmp/mypreservationfiles")
 func (b *Bag) AddDir(src string) (errs []error) {
-	data, errs := b.payload.AddAll(src, b.Manifest.algo.New())
+	data, errs := b.payload.AddAll(src, b.Manifest)
 
 	for key := range data {
 		b.Manifest.Data[filepath.Join("data", key)] = data[key]
@@ -253,64 +250,4 @@ func (b *Bag) ListFiles() ([]string, error) {
 	}
 
 	return files, nil
-}
-
-/*
- Returns the filepaths for all files being tracked by the bag object that are
- not part of the payload. This includes the list of manifests and tagsfiles.
-*/
-func (b *Bag) TrackedFiles() []string {
-
-	var files []string
-
-	for tf, _ := range b.tagfiles {
-		files = append(files, tf)
-	}
-
-	if mPath, err := filepath.Rel(b.Path(), b.Manifest.Name()); err != nil {
-		files = append(files, mPath)
-	}
-	return files
-}
-
-/*
- Checks that the bag actually contains all the files it expects to and returns
- slice of errors indicating the ones that don't.
-*/
-func (b *Bag) ConfirmFiles() []error {
-	var errs []error
-
-	files := b.TrackedFiles()
-
-	for _, f := range files {
-		if _, err := os.Stat(filepath.Join(b.Path(), f)); os.IsNotExist(err) {
-			errs = append(errs, fmt.Errorf("Unable to find: %v", f))
-		}
-	}
-
-	return errs
-}
-
-/*
- Method returns the filepath of any files appearing in Bag.ListFiles that are
- not found in Bag.TrackedFiles
-*/
-func (b *Bag) Orphans() []string {
-
-	var oList []string
-	// Make map to compare contents to.
-	tracked := b.TrackedFiles()
-	fMap := make(map[string]bool)
-	for _, fn := range tracked {
-		fMap[fn] = true
-	}
-
-	files, _ := b.ListFiles()
-	for _, f := range files {
-		if _, ok := fMap[f]; !ok {
-			oList = append(oList, f)
-		}
-	}
-
-	return oList
 }

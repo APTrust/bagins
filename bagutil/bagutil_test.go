@@ -17,32 +17,16 @@ var test_list map[string]string = map[string]string{
 }
 var test_string string = "The quick brown fox jumps over the lazy dog"
 
-func TestNewChecksumAlgorithm(t *testing.T) {
-	for key, _ := range test_list {
-		hsh, _ := LookupHash(key)
-		chkAlgo := NewChecksumAlgorithm(key, hsh)
-		if chkAlgo == nil {
-			t.Error("Returned nil for check algorithm")
-		}
-	}
-}
-
-func TestNewCheckByName(t *testing.T) {
-	for key, _ := range test_list {
-		_, err := NewCheckByName(key)
-		if err != nil {
-			t.Error(err)
-		}
-	}
-}
-
 func TestFileChecksum(t *testing.T) {
 	testFile, _ := ioutil.TempFile("", "_GO_TESTFILECHECKSUM_")
 	testFile.WriteString(test_string)
 	testFile.Close()
 	for key, sum := range test_list {
-		hsh, _ := LookupHash(key)
-		actual, err := FileChecksum(testFile.Name(), hsh)
+		hsh, err := LookupHash(key)
+		if err != nil {
+			t.Error(err)
+		}
+		actual, err := FileChecksum(testFile.Name(), hsh())
 		if err != nil {
 			t.Error(err)
 		}
@@ -51,17 +35,4 @@ func TestFileChecksum(t *testing.T) {
 		}
 	}
 	os.Remove(testFile.Name())
-}
-
-func TestLookupHash(t *testing.T) {
-	for algo, _ := range test_list {
-		hash, _ := LookupHash(algo)
-		if hash == nil {
-			t.Error("Expecting a return for", algo, "but returned nil!")
-		}
-	}
-	nilHash, err := LookupHash("badname")
-	if nilHash != nil || err == nil {
-		t.Error("Expected badhash name to return nil and raise err but it did not!")
-	}
 }

@@ -4,7 +4,6 @@ package bagins_test
 import (
 	"fmt"
 	"github.com/APTrust/bagins"
-	"github.com/APTrust/bagins/bagutil"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -13,12 +12,21 @@ import (
 	"testing"
 )
 
+var test_list map[string]string = map[string]string{
+	"md5":    "9e107d9d372bb6826bd81d3542a419d6",
+	"sha1":   "2fd4e1c67a2d28fced849ee1bb76e7391b93eb12",
+	"sha256": "d7a8fbb307d7809469ca9abcb0082e4f8d5651e46d3cdb762d02d0bf37c9e592",
+	"sha512": "07e547d9586f6a73f73fbac0435ed76951218fb7d0c8d788a309d785436bbb642e93a252a954f23912547d1e8a3b5ed6e1bfd7097821233fa0538f3db854fee6",
+	"sha224": "730e109bd7a8a32b1cb9d9a09aa2325d2430587ddbc0c38bad911525",
+	"sha384": "ca737f1014a48f4c0b6dd43cb177b0afd9e5169367544c494011e3317dbf9a509cb1e5dc1e85a941bbee3d7f2afbc9b1",
+}
+var test_string string = "The quick brown fox jumps over the lazy dog"
+
 func TestNewManifest(t *testing.T) {
 	pth, _ := ioutil.TempDir("", "_GOTEST_MANIFEST")
 	defer os.RemoveAll(pth)
 
-	chk, _ := bagutil.NewCheckByName("sha1")
-	_, err := bagins.NewManifest(pth, chk)
+	_, err := bagins.NewManifest(pth, "sha1")
 	if err != nil {
 		t.Error("Manifest could not be created!", err)
 	}
@@ -50,11 +58,7 @@ func TestReadManifest(t *testing.T) {
 	}
 
 	// Setup a good test manifest
-	h, err := bagutil.NewCheckByName("md5")
-	if err != nil {
-		t.Error(err)
-	}
-	mf, err := bagins.NewManifest(os.TempDir(), h)
+	mf, err := bagins.NewManifest(os.TempDir(), "md5")
 	if err != nil {
 		t.Error(err)
 	}
@@ -82,18 +86,17 @@ func TestReadManifest(t *testing.T) {
 }
 
 func TestRunChecksums(t *testing.T) {
-	testFile, _ := ioutil.TempFile("", "_GOTEST_")
-	testFile.WriteString("Test the checksum")
+	testFile, _ := ioutil.TempFile("", "_GOTEST_RUNCHECKSUMS.txt")
+	testFile.WriteString(test_string)
 	testFile.Close()
 
-	chk, _ := bagutil.NewCheckByName("sha1")
-	mfst, _ := bagins.NewManifest(os.TempDir(), chk)
-	mfst.Data[testFile.Name()] = "da909ba395016f2a64b04d706520db6afa74fc95"
+	mfst, _ := bagins.NewManifest(os.TempDir(), "sha1")
+	mfst.Data[filepath.Base(testFile.Name())] = test_list["sha1"]
 	errList := mfst.RunChecksums()
 
 	// Checksum for file should now be generated.
-	if len(errList) != 0 {
-		t.Error("Checksums not matching as expected!")
+	for _, err := range errList {
+		t.Error(err)
 	}
 
 	// Check that it throws an error if mismatch checksum.
@@ -106,8 +109,7 @@ func TestRunChecksums(t *testing.T) {
 }
 
 func TestManifestCreate(t *testing.T) {
-	chk, _ := bagutil.NewCheckByName("sha1")
-	m, _ := bagins.NewManifest(os.TempDir(), chk)
+	m, _ := bagins.NewManifest(os.TempDir(), "sha1")
 
 	testFiles := make([]*os.File, 3)
 	for idx := range testFiles {
@@ -130,8 +132,7 @@ func TestManifestCreate(t *testing.T) {
 func TestManifestName(t *testing.T) {
 
 	// Set only Algo should still be blank.
-	h, _ := bagutil.NewCheckByName("SHA1")
-	m, err := bagins.NewManifest(os.TempDir(), h)
+	m, err := bagins.NewManifest(os.TempDir(), "SHA1")
 	if err != nil {
 		t.Error(err)
 	}

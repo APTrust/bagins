@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/APTrust/bagins/bagutil"
+	"hash"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -28,13 +29,13 @@ import (
    tagmanifest: http://tools.ietf.org/html/draft-kunze-bagit-09#section-2.2.1
 */
 type Manifest struct {
-	name string            // Path to the
-	Data map[string]string // Map of filepath key and checksum value for that file
-	algo *bagutil.ChecksumAlgorithm
+	name     string            // Path to the
+	Data     map[string]string // Map of filepath key and checksum value for that file
+	hashFunc func() hash.Hash
 }
 
 // Returns a pointer to a new manifest or returns an error if improperly named.
-func NewManifest(pth string, chkAlgo *bagutil.ChecksumAlgorithm) (*Manifest, error) {
+func NewManifest(pth string, hashName string) (*Manifest, error) {
 	if _, err := os.Stat(pth); err != nil {
 		if os.IsNotExist(err) {
 			return nil, fmt.Errorf("Unable to create manifest.  Path does not exist: %s", pth)
@@ -43,9 +44,14 @@ func NewManifest(pth string, chkAlgo *bagutil.ChecksumAlgorithm) (*Manifest, err
 		}
 	}
 	m := new(Manifest)
+	hashFunc, err := bagutil.LookupHash(hashName)
+	if err != nil {
+		return nil, err
+	}
+	m.hashFunc = hashFunc
 	m.Data = make(map[string]string)
-	m.name = filepath.Join(pth, "manifest-"+strings.ToLower(chkAlgo.Name())+".txt")
-	m.algo = chkAlgo
+	m.name = filepath.Join(pth, "manifest-"+strings.ToLower(hashName)+".txt")
+
 	return m, nil
 }
 
@@ -57,12 +63,7 @@ func NewManifest(pth string, chkAlgo *bagutil.ChecksumAlgorithm) (*Manifest, err
 func ReadManifest(name string) (*Manifest, []error) {
 	var errs []error
 
-	algo, err := parseAlgoName(name)
-	if err != nil {
-		return nil, append(errs, err)
-	}
-
-	hsh, err := bagutil.NewCheckByName(algo)
+	hashName, err := parseAlgoName(name)
 	if err != nil {
 		return nil, append(errs, err)
 	}
@@ -77,7 +78,7 @@ func ReadManifest(name string) (*Manifest, []error) {
 		errs = append(errs, e...)
 	}
 
-	m, err := NewManifest(name, hsh)
+	m, err := NewManifest(name, hashName)
 	if err != nil {
 		return nil, append(errs, err)
 	}
@@ -96,9 +97,9 @@ func (m *Manifest) RunChecksums() []error {
 
 	for key, sum := range m.Data {
 		pth := filepath.Join(filepath.Dir(m.name), key)
-		fileChecksum, err := bagutil.FileChecksum(pth, m.algo.New())
+		fileChecksum, err := bagutil.FileChecksum(pth, m.hashFunc())
 		if sum != fileChecksum {
-			invalidSums = append(invalidSums, fmt.Errorf("File checkum is not valid for %s", key))
+			invalidSums = append(invalidSums, fmt.Errorf("File checkum %s is not valid for %s:%s", sum, key, fileChecksum))
 		}
 		if err != nil {
 			invalidSums = append(invalidSums, err)
