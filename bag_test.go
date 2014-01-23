@@ -221,7 +221,7 @@ func TestPath(t *testing.T) {
 	}
 }
 
-func TestClose(t *testing.T) {
+func TestSave(t *testing.T) {
 	// Setup test bag
 	bag, _ := setupTestBag("_GOTEST_BAG_CLOSE_")
 	defer os.RemoveAll(bag.Path())
@@ -230,7 +230,7 @@ func TestClose(t *testing.T) {
 	bag.Manifest.Data["data/fakefile.txt"] = "da909ba395016f2a64b04d706520db6afa74fc95"
 
 	// It should not throw an error.
-	if errs := bag.Close(); len(errs) != 0 {
+	if errs := bag.Save(); len(errs) != 0 {
 		for idx := range errs {
 			t.Error(errs[idx])
 		}
@@ -253,7 +253,7 @@ func TestClose(t *testing.T) {
 	tf.Data.AddField(*bagins.NewTagField("MyNewField", "This is testdata."))
 
 	// it should not throw an error.
-	if errs := bag.Close(); len(errs) != 0 {
+	if errs := bag.Save(); len(errs) != 0 {
 		for idx := range errs {
 			t.Error(errs[idx])
 		}

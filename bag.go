@@ -52,7 +52,7 @@ func NewBag(location string, name string, hashName string) (*Bag, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer bag.Close()
+	defer bag.Save()
 
 	// Init the manifests map and create the root manifest
 	bag.Manifest, err = NewManifest(bag.Path(), hashName)
@@ -199,7 +199,7 @@ func (b *Bag) Path() string {
  This method writes all the relevant tag and manifest files to finish off the
  bag.
 */
-func (b *Bag) Close() (errs []error) {
+func (b *Bag) Save() (errs []error) {
 	// Write all the manifest files.
 	if err := b.Manifest.Create(); err != nil {
 		errs = append(errs, err)
