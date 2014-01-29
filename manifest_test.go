@@ -41,7 +41,7 @@ func TestReadManifest(t *testing.T) {
 		t.Error(err)
 	}
 	badfile.Close()
-	defer os.Remove(badpth)
+	defer os.Remove(badfile.Name())
 
 	// It should
 	_, errs := bagins.ReadManifest(badpth)

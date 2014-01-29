@@ -83,13 +83,30 @@ func TestReadBag(t *testing.T) {
 
 	// It should return an error if the directory does not contain a data subdirectory.
 	pDir, _ := ioutil.TempDir("", "_GOTEST_Payload_")
-	defer os.Remove(pDir)
+	//defer os.RemoveAll(pDir)
 
 	if _, err := bagins.ReadBag(pDir, []string{}, ""); err == nil {
 		t.Errorf("Not returning expected error when directory has no data subdirectory for %s", pDir)
 	}
 
-	// It should return an error if it can't determine a valid manifest file.
+	os.Mkdir(filepath.Join(pDir, "data"), os.ModePerm) // Set up data directory for later tests.
+
+	// It should return an error if there is no manifest file.
+	if _, err := bagins.ReadBag(pDir, []string{}, ""); err == nil {
+		t.Errorf("Not returning expected error when no manifest file is present in %s", pDir)
+	}
+
+	// It should return an error if it has a bad manifest name.
+	ioutil.WriteFile(filepath.Join(pDir, "manifest-sha404.txt"), []byte{}, os.ModePerm)
+	if _, err := bagins.ReadBag(pDir, []string{}, ""); err == nil {
+		t.Errorf("Not returning expected error when a bad manifest filename is only option %s", pDir)
+	}
+
+	// It should return a bag if a valid manifest and data directory exist.
+	ioutil.WriteFile(filepath.Join(pDir, "manifest-sha256.txt"), []byte{}, os.ModePerm)
+	if _, err := bagins.ReadBag(pDir, []string{}, ""); err != nil {
+		t.Errorf("Unexpected error when trying to read raw bag with valid data and manifest: %s", err)
+	}
 
 	// It should return an error if it return a valid bag-info.txt
 

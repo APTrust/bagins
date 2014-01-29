@@ -147,7 +147,7 @@ func (m *Manifest) Name() string {
 // an error if unable to do so.
 func parseAlgoName(name string) (string, error) {
 	filename := filepath.Base(name)
-	re, err := regexp.Compile(`(^.*\-)(.*)(\..*$)`)
+	re, err := regexp.Compile(`(^.*\-)(.*)(\.txt$)`)
 	if err != nil {
 		return "", err
 	}

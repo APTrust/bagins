@@ -113,14 +113,14 @@ func ReadBag(pth string, tagfiles []string, manifest string) (*Bag, error) {
 	}
 
 	// Get the payload directory.
-	payload, err := NewPayload(filepath.Join(fi.Name(), "/data"))
+	payload, err := NewPayload(filepath.Join(pth, "data"))
 	if err != nil {
 		return nil, err
 	}
 
 	// Get the bag root directory.
 	bag := new(Bag)
-	bag.pth = fi.Name()
+	bag.pth = pth
 	bag.payload = payload
 
 	if manifest == "" {
@@ -144,7 +144,6 @@ func (b *Bag) findManifest() {
 		pth := filepath.Join(b.pth, fName)
 		if b.Manifest == nil && strings.HasPrefix(fName, "manifest-") {
 			b.Manifest, _ = ReadManifest(pth)
-			break
 		}
 	}
 }
