@@ -26,9 +26,9 @@ import (
 
 // Represents the basic structure of a bag which is controlled by methods.
 type Bag struct {
-	pth      string // the bag is under.
+	pth      string // path to the bag
 	payload  *Payload
-	Manifest *Manifest           // relative path in bag as key.
+	Manifest *Manifest
 	tagfiles map[string]*TagFile // relative path in bag as key,
 }
 
@@ -98,9 +98,56 @@ func (b *Bag) createBagItFile() (*TagFile, error) {
 	return bagit, nil
 }
 
-// func ReadBag(pth string) (*Bag, []error) {
+/*
+	Reads the directory provided as the root of a new bag and attemps to parse the file
+	contents into payload, manifests and tagfiles.
+*/
+func ReadBag(pth string, tagfiles []string, manifest string) (*Bag, error) {
+	// validate existance
+	fi, err := os.Stat(pth)
+	if err != nil {
+		return nil, err
+	}
+	if !fi.IsDir() {
+		return nil, fmt.Errorf("%s is not a directory.", pth)
+	}
 
-// }
+	// Get the payload directory.
+	payload, err := NewPayload(filepath.Join(fi.Name(), "/data"))
+	if err != nil {
+		return nil, err
+	}
+
+	// Get the bag root directory.
+	bag := new(Bag)
+	bag.pth = fi.Name()
+	bag.payload = payload
+
+	if manifest == "" {
+		bag.findManifest()
+		if bag.Manifest == nil {
+			return nil, fmt.Errorf("Unable to parse a manifest")
+		}
+	}
+
+	for _, tName := range tagfiles {
+		fmt.Printf("Looking for tagfile %s", tName)
+	}
+
+	// TODO change this return
+	return bag, nil
+}
+
+func (b *Bag) findManifest() {
+	bagFiles, _ := b.ListFiles()
+	for _, fName := range bagFiles {
+		pth := filepath.Join(b.pth, fName)
+		if b.Manifest == nil && strings.HasPrefix(fName, "manifest-") {
+			b.Manifest, _ = ReadManifest(pth)
+			break
+		}
+	}
+}
 
 // METHODS FOR MANAGING BAG PAYLOADS
 

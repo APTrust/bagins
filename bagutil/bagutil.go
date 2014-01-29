@@ -1,3 +1,7 @@
+/*
+Package contains various utility methods to work with bagit bags.
+
+*/
 package bagutil
 
 /*

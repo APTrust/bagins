@@ -63,6 +63,40 @@ func TestNewBag(t *testing.T) {
 	}
 }
 
+func TestReadBag(t *testing.T) {
+
+	// It should return an error when passed a path that doesn't exist.
+	badPath := "/thispath/isbad"
+	if _, err := bagins.ReadBag(badPath, []string{}, ""); err == nil {
+		t.Errorf("Path %s not detected as bad as expected.", badPath)
+	}
+
+	// It should return an error if it isn't passed a path to a directory.
+	fi, _ := ioutil.TempFile("", "TEST_GO_READBAG_")
+	fi.WriteString("Test file please delete.")
+	fi.Close()
+	defer os.Remove(fi.Name())
+
+	if _, err := bagins.ReadBag(fi.Name(), []string{}, ""); err == nil {
+		t.Error("Readbag should thrown an error when trying to open a file: %s", fi.Name())
+	}
+
+	// It should return an error if the directory does not contain a data subdirectory.
+	pDir, _ := ioutil.TempDir("", "_GOTEST_Payload_")
+	defer os.Remove(pDir)
+
+	if _, err := bagins.ReadBag(pDir, []string{}, ""); err == nil {
+		t.Errorf("Not returning expected error when directory has no data subdirectory for %s", pDir)
+	}
+
+	// It should return an error if it can't determine a valid manifest file.
+
+	// It should return an error if it return a valid bag-info.txt
+
+	// It should return a valid bag.
+
+}
+
 // It should place an appropriate file in the data directory and add the fixity to the manifest.
 func TestAddFile(t *testing.T) {
 	// Setup the test file to add for the test.
