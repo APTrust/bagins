@@ -122,6 +122,7 @@ func ReadBag(pth string, tagfiles []string, manifest string) (*Bag, error) {
 	bag := new(Bag)
 	bag.pth = pth
 	bag.payload = payload
+	bag.tagfiles = make(map[string]*TagFile)
 
 	if manifest == "" {
 		bag.findManifest()
@@ -135,10 +136,9 @@ func ReadBag(pth string, tagfiles []string, manifest string) (*Bag, error) {
 		if len(errs) != 0 {
 			fmt.Println(errs)
 		}
-		fmt.Printf("%T", tf)
-		// if tf != nil {
-		// 	bag.tagfiles[tName] = tf
-		// }
+		if tf != nil {
+			bag.tagfiles[tName] = tf
+		}
 	}
 
 	// TODO change this return

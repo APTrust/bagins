@@ -50,7 +50,7 @@ func TestPayloadName(t *testing.T) {
 }
 
 func TestPayloadAdd(t *testing.T) {
-	pDir, _ := ioutil.TempDir("", "GOTEST_PayloadAdd_")
+	pDir, _ := ioutil.TempDir("", "_GOTEST_PayloadAdd_")
 	m, _ := bagins.NewManifest(os.TempDir(), "md5")
 	defer os.RemoveAll(pDir)
 

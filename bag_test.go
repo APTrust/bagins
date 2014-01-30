@@ -82,8 +82,8 @@ func TestReadBag(t *testing.T) {
 	}
 
 	// It should return an error if the directory does not contain a data subdirectory.
-	pDir, _ := ioutil.TempDir("", "_GOTEST_Payload_")
-	//defer os.RemoveAll(pDir)
+	pDir, _ := ioutil.TempDir("", "_GOTEST_ReadBag_Payload_")
+	defer os.RemoveAll(pDir)
 
 	if _, err := bagins.ReadBag(pDir, []string{}, ""); err == nil {
 		t.Errorf("Not returning expected error when directory has no data subdirectory for %s", pDir)
@@ -118,17 +118,17 @@ func TestReadBag(t *testing.T) {
 	}
 	tb.Save()
 
-	_, err = bagins.ReadBag(bagPath, []string{"bagit.txt"}, "manifest-md5.txt")
+	testBag, err := bagins.ReadBag(bagPath, []string{"bagit.txt"}, "manifest-md5.txt")
 	if err != nil {
 		t.Errorf("Unexpected error reading test bag: %s", err)
 	}
-	// baginfo, err := testBag.TagFile("bagit.txt")
-	// if err != nil {
-	// 	t.Errorf("Unexpected error reading bagit.txt file: %s", err)
-	// }
-	// if baginfo != nil {
-	// 	t.Errorf("Baginfo unexpectedly nil.")
-	// }
+	baginfo, err := testBag.TagFile("bagit.txt")
+	if err != nil {
+		t.Errorf("Unexpected error reading bagit.txt file: %s", err)
+	}
+	if baginfo == nil {
+		t.Errorf("Baginfo unexpectedly nil.")
+	}
 }
 
 // It should place an appropriate file in the data directory and add the fixity to the manifest.
