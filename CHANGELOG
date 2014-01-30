@@ -1,22 +1,18 @@
-CHANGELOG
+# CHANGELOG
 
-0.5.0
-------
+## 0.5.0
 
 * Initial release.  Library works to build basic bags.
 
-0.6.0
-------
+## 0.6.0
 
 * Can compile a command line executable basic bagger.  See README.rst for info
 
-0.6.1
------
+## 0.6.1
 
 * bagmaker runs with throttles go routines to avoid a too many open files error.
 
-0.7.0
-------
+# 0.7.0
 
 * Added a Bag.Contents method that lists all the files found in the bag directory
   regardless to weather they are managed by the bag object or not.
@@ -29,3 +25,14 @@ CHANGELOG
 
 * Added a Bag.Orphans method that lists any files in the bag that are not found
   in the Bag.FileManifest.
+
+## 0.8.0
+
+* Added ability to open and read a bag directory on disk, tag files and manifests.
+
+* Reduced number of concurrent files processed in checksums from 100 to 5
+
+* Removed a number of unneeded methods.
+
+* Added support for multiple tag fields with the same name and tag files respect
+  field order.
