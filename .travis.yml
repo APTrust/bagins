@@ -7,3 +7,7 @@ notifications:
       - streamweaver@gmail.com
     on_success: change
     on_failure: always
+    branches:
+  only:
+    - master
+    - develop

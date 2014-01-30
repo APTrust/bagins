@@ -1,3 +1,7 @@
+/*
+Package contains various utility methods to work with bagit bags.
+
+*/
 package bagutil
 
 /*
@@ -21,43 +25,6 @@ import (
 	"strings"
 )
 
-type ChecksumAlgorithm struct {
-	name string
-	hsh  func() hash.Hash
-}
-
-func (cs *ChecksumAlgorithm) New() hash.Hash {
-	return cs.hsh()
-}
-
-func (cs *ChecksumAlgorithm) Algo() func() hash.Hash {
-	return cs.hsh
-}
-
-func (cs *ChecksumAlgorithm) Name() string {
-	return cs.name
-}
-
-func NewChecksumAlgorithm(name string, hsh func() hash.Hash) *ChecksumAlgorithm {
-	cs := new(ChecksumAlgorithm)
-	cs.name = name
-	cs.hsh = hsh
-	return cs
-}
-
-// Convienence method that looks up a checksum by name and assigns it
-// properly or returns an error.
-func NewCheckByName(name string) (*ChecksumAlgorithm, error) {
-	hsh, err := LookupHashFunc(name)
-	if err != nil {
-		return nil, err
-	}
-	h := new(ChecksumAlgorithm)
-	h.name = strings.ToLower(name)
-	h.hsh = hsh
-	return h, nil
-}
-
 // Performs a checksum with the hsh.Hash.Sum() method passed to the function
 // and returns the hex value of the resultant string or an error
 func FileChecksum(filepath string, hsh hash.Hash) (string, error) {
@@ -69,26 +36,20 @@ func FileChecksum(filepath string, hsh hash.Hash) (string, error) {
 
 	_, err = io.Copy(hsh, src)
 	if err != nil {
-		panic(err)
+		return "", err
 	}
-	byteSum := hsh.Sum(nil)
-	return fmt.Sprintf("%x", byteSum), nil
+	return fmt.Sprintf("%x", hsh.Sum(nil)), nil
 }
 
-// Returns a new hash.Hash as indicated by the algo string.
-// TODO change this to return a func() hash.Hash
-func LookupHash(algo string) (hash.Hash, error) {
-	hsh, err := LookupHashFunc(algo)
-	if err != nil {
-		return nil, err
-	}
-	return hsh(), nil
+// Utility method to return the operation system seperator as a string.
+func PathSeparator() string {
+	return string(byte(os.PathSeparator))
 }
 
 // Returns a new hash function based on a lookup of the algo string
 // passed to the function.  Returns an error if the algo string does not match
 // any of the available cryto hashes.
-func LookupHashFunc(algo string) (func() hash.Hash, error) {
+func LookupHash(algo string) (func() hash.Hash, error) {
 	switch strings.ToLower(algo) {
 	case "md5":
 		return crypto.MD5.New, nil

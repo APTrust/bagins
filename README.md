@@ -19,8 +19,7 @@ Installation
 ------------
 
 This package is "go get-able" so simply import the package via 
-'github.com/APTrust/bagins' or use the `go get
-<http://golang.org/cmd/go/#hdr-Download_and_install_packages_and_dependencies>`_
+'github.com/APTrust/bagins' or use the [go get](http://golang.org/cmd/go/#hdr-Download_and_installpackages_and_dependencies)
  command directly as follows::
 
 	go get github.com/APTrust/bagins

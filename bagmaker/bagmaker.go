@@ -11,8 +11,6 @@ import (
 	"flag"
 	"fmt"
 	"github.com/APTrust/bagins"
-	"github.com/APTrust/bagins/bagutil"
-	// "os"
 	"time"
 )
 
@@ -46,7 +44,7 @@ Flags:
 
 	-name <value> Name for the bag root directory.
 
-	-payload <value> Directory of files to parse into the bag.
+	-payload <value> Directory of files to copy into the bag.
 
 `
 	fmt.Println(usage)
@@ -69,13 +67,7 @@ func main() {
 
 	begin := time.Now()
 
-	cs, err := bagutil.NewCheckByName(algo)
-	if err != nil {
-		fmt.Println("Unable to find checksum", algo)
-		return
-	}
-
-	bag, err := bagins.NewBag(dir, name, cs)
+	bag, err := bagins.NewBag(dir, name, algo)
 	if err != nil {
 		fmt.Println("Bag Error:", err)
 		return
@@ -87,14 +79,7 @@ func main() {
 		return
 	}
 
-	// if info := parse_info(os.Args); len(info) > 0 {
-	// 	bag.AddTagfile("bag-info.txt")
-	// 	if tf, err := bag.BagInfo(); err != nil {
-	// 		tf.Data = info
-	// 	}
-	// }
-
-	bag.Close()
+	bag.Save()
 
 	elapsed := time.Since(begin)
 	fmt.Println("END: elapsed in", elapsed.Seconds(), "seconds.")
