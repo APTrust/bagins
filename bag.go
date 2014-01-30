@@ -131,7 +131,14 @@ func ReadBag(pth string, tagfiles []string, manifest string) (*Bag, error) {
 	}
 
 	for _, tName := range tagfiles {
-		fmt.Printf("Looking for tagfile %s", tName)
+		tf, errs := ReadTagFile(filepath.Join(bag.pth, tName))
+		if len(errs) != 0 {
+			fmt.Println(errs)
+		}
+		fmt.Printf("%T", tf)
+		// if tf != nil {
+		// 	bag.tagfiles[tName] = tf
+		// }
 	}
 
 	// TODO change this return

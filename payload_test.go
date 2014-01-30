@@ -13,7 +13,7 @@ import (
 
 func TestNewPayload(t *testing.T) {
 
-	tmpPyld := filepath.Join(os.TempDir(), "__GOTEST_Payload/")
+	tmpPyld := filepath.Join(os.TempDir(), "_GOTEST_NewPayload_")
 
 	// Check for failure on non-existant directory.
 	_, err := bagins.NewPayload(tmpPyld)
@@ -22,7 +22,7 @@ func TestNewPayload(t *testing.T) {
 	}
 
 	// Check for positive return when directory exists.
-	pth, err := ioutil.TempDir("", "_GOTEST_Payload")
+	pth, err := ioutil.TempDir("", "_GOTEST_NewPayload_")
 	if err != nil {
 		t.Errorf("Unexpcted error creating temporary directory: %s", err)
 	}
@@ -35,11 +35,11 @@ func TestNewPayload(t *testing.T) {
 	}
 
 	// Clean it up.
-	os.Remove(pth)
+	os.RemoveAll(pth)
 }
 
 func TestPayloadName(t *testing.T) {
-	pDir, _ := ioutil.TempDir("", "_GOTEST_Payload_")
+	pDir, _ := ioutil.TempDir("", "_GOTEST_PayloadName_")
 	defer os.Remove(pDir)
 
 	p, _ := bagins.NewPayload(pDir)
@@ -50,7 +50,7 @@ func TestPayloadName(t *testing.T) {
 }
 
 func TestPayloadAdd(t *testing.T) {
-	pDir, _ := ioutil.TempDir("", "GOTEST_Payload")
+	pDir, _ := ioutil.TempDir("", "GOTEST_PayloadAdd_")
 	m, _ := bagins.NewManifest(os.TempDir(), "md5")
 	defer os.RemoveAll(pDir)
 
@@ -59,7 +59,7 @@ func TestPayloadAdd(t *testing.T) {
 		t.Error(err)
 	}
 
-	testFile, _ := ioutil.TempFile("", "_GO_TESTFILE_")
+	testFile, _ := ioutil.TempFile("", "_GO_PayloadAdd_TESTFILE_")
 	testFile.WriteString("Test the checksum")
 	testFile.Close()
 	defer os.Remove(testFile.Name())
@@ -76,16 +76,16 @@ func TestPayloadAdd(t *testing.T) {
 
 func TestPayloadAddAll(t *testing.T) {
 	// Setup directories to test on
-	srcDir, _ := ioutil.TempDir("", "_GOTEST_SRCDIR_")
+	srcDir, _ := ioutil.TempDir("", "_GOTEST_PayloadAddAll_SRCDIR_")
 	defer os.RemoveAll(srcDir)
-	pDir, _ := ioutil.TempDir("", "_GOTEST_Payload_")
+	pDir, _ := ioutil.TempDir("", "_GOTEST_PayloadAddAll_")
 	defer os.RemoveAll(pDir)
 
 	m, _ := bagins.NewManifest(os.TempDir(), "md5")
 
 	// Setup test files
 	for i := 0; i < 100; i++ {
-		tstFile, _ := ioutil.TempFile(srcDir, "_GOTEST_FILE_")
+		tstFile, _ := ioutil.TempFile(srcDir, "_GOTEST_PayloadAddAll_FILE_")
 		tstFile.WriteString("Test the checksum")
 		tstFile.Close()
 	}
@@ -116,12 +116,12 @@ func TestPayloadAddAll(t *testing.T) {
 
 func TestPayloadOctetStreamSum(t *testing.T) {
 	// Setup Test directory
-	pDir, _ := ioutil.TempDir("", "_GOTEST_Payload_")
+	pDir, _ := ioutil.TempDir("", "_GOTEST_PayloadOctetStreamSum_")
 	defer os.RemoveAll(pDir)
 
 	// Setup test files
 	for i := 0; i < 100; i++ {
-		tstFile, _ := ioutil.TempFile(pDir, "_GOTEST_FILE_")
+		tstFile, _ := ioutil.TempFile(pDir, "_GOTEST_PayloadOctetStreamSum_FILE_")
 		tstFile.WriteString("Test the checksum")
 		tstFile.Close()
 	}
@@ -138,16 +138,16 @@ func TestPayloadOctetStreamSum(t *testing.T) {
 }
 
 func BenchmarkPayload(b *testing.B) {
-	srcDir, _ := ioutil.TempDir("", "_GOTEST_SRCDIR_")
+	srcDir, _ := ioutil.TempDir("", "_GOTEST_BenchmarkPayload_SRCDIR_")
 	defer os.RemoveAll(srcDir)
-	pDir, _ := ioutil.TempDir("", "_GOTEST_Payload_")
+	pDir, _ := ioutil.TempDir("", "_GOTEST_BenchmarkPayload_Payload_")
 	defer os.RemoveAll(pDir)
 
 	m, _ := bagins.NewManifest(os.TempDir(), "md5")
 
 	// Make src temp test files
 	for i := 0; i < 300; i++ {
-		tstFile, _ := ioutil.TempFile(srcDir, "_GOTEST_FILE_")
+		tstFile, _ := ioutil.TempFile(srcDir, "_GOTEST_BenchmarkPayload_FILE_")
 		tstFile.WriteString(strings.Repeat("Test the checksum. ", 500000)) // produces ~9 meg text file.
 		tstFile.Close()
 	}

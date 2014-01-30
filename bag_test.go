@@ -108,10 +108,27 @@ func TestReadBag(t *testing.T) {
 		t.Errorf("Unexpected error when trying to read raw bag with valid data and manifest: %s", err)
 	}
 
-	// It should return an error if it return a valid bag-info.txt
+	// It should read and return a valid bag object reading with a baginfo.txt tagfile.
+	bagName := "__GO_READBAG_TEST__"
+	bagPath := filepath.Join(os.TempDir(), bagName)
+	tb, err := setupTestBag(bagName)
+	defer os.RemoveAll(bagPath)
+	if err != nil {
+		t.Errorf("%s", err)
+	}
+	tb.Save()
 
-	// It should return a valid bag.
-
+	_, err = bagins.ReadBag(bagPath, []string{"bagit.txt"}, "manifest-md5.txt")
+	if err != nil {
+		t.Errorf("Unexpected error reading test bag: %s", err)
+	}
+	// baginfo, err := testBag.TagFile("bagit.txt")
+	// if err != nil {
+	// 	t.Errorf("Unexpected error reading bagit.txt file: %s", err)
+	// }
+	// if baginfo != nil {
+	// 	t.Errorf("Baginfo unexpectedly nil.")
+	// }
 }
 
 // It should place an appropriate file in the data directory and add the fixity to the manifest.
