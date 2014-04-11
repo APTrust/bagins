@@ -40,7 +40,7 @@ type Bag struct {
  bag already exist.
 
  example:
- 		NewBag("archive/bags", "bag-34323", "sha256")
+		NewBag("archive/bags", "bag-34323", "sha256")
 */
 func NewBag(location string, name string, hashName string) (*Bag, error) {
 	// Create the bag object.
@@ -129,6 +129,17 @@ func ReadBag(pth string, tagfiles []string, manifest string) (*Bag, error) {
 		if bag.Manifest == nil {
 			return nil, fmt.Errorf("Unable to parse a manifest")
 		}
+	} else {
+		manifestPath := filepath.Join(bag.pth, manifest)
+		if _, err := os.Stat(manifestPath); err != nil {
+			return nil, fmt.Errorf("Manifest", manifest, "does not exist")
+		}
+		parsedManifest, errs := ReadManifest(manifestPath)
+		if errs != nil && len(errs) > 0 {
+			return nil, fmt.Errorf("Unable to parse a manifest", errs)
+		} else {
+			bag.Manifest = parsedManifest
+		}
 	}
 
 	for _, tName := range tagfiles {
@@ -194,7 +205,7 @@ func (b *Bag) AddDir(src string) (errs []error) {
  creating whatever subdirectories are needed if supplied
  as part of name parameter.
  example:
- 			err := b.AddTagfile("baginfo.txt")
+			err := b.AddTagfile("baginfo.txt")
 */
 func (b *Bag) AddTagfile(name string) error {
 	tagPath := filepath.Join(b.Path(), name)

@@ -50,7 +50,15 @@ func NewManifest(pth string, hashName string) (*Manifest, error) {
 	}
 	m.hashFunc = hashFunc
 	m.Data = make(map[string]string)
-	m.name = filepath.Join(pth, "manifest-"+strings.ToLower(hashName)+".txt")
+
+	// TODO: Fix this!
+	// First option is required if user passed a manifest file name into Bag.ReadBag().
+	// Second option is required if no manifest file name was passed in to Bag.ReadBag().
+	if filepath.Dir(pth) != "" && strings.Contains(pth, "manifest-") {
+		m.name = pth
+	} else {
+		m.name = filepath.Join(pth, "manifest-"+strings.ToLower(hashName)+".txt")
+	}
 
 	return m, nil
 }
