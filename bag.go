@@ -145,7 +145,8 @@ func ReadBag(pth string, tagfiles []string, manifest string) (*Bag, error) {
 	for _, tName := range tagfiles {
 		tf, errs := ReadTagFile(filepath.Join(bag.pth, tName))
 		if len(errs) != 0 {
-			fmt.Println(errs)
+			// TODO: What should we do with these errors?
+			//fmt.Println(errs)
 		}
 		if tf != nil {
 			bag.tagfiles[tName] = tf
