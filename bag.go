@@ -22,6 +22,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"log"
 )
 
 // Represents the basic structure of a bag which is controlled by methods.
@@ -145,8 +146,7 @@ func ReadBag(pth string, tagfiles []string, manifest string) (*Bag, error) {
 	for _, tName := range tagfiles {
 		tf, errs := ReadTagFile(filepath.Join(bag.pth, tName))
 		if len(errs) != 0 {
-			// TODO: What should we do with these errors?
-			//fmt.Println(errs)
+			log.Println("While parsing tagfiles:", errs)
 		}
 		if tf != nil {
 			bag.tagfiles[tName] = tf
