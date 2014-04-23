@@ -236,7 +236,7 @@ func validateTagFileName(name string) (err error) {
 */
 func parseTagFields(file *os.File) ([]TagField, []error) {
 	var errors []error
-	re, err := regexp.Compile(`^(\S*):?(\s.*)?$`)
+	re, err := regexp.Compile(`^(\S*\:)?(\s.*)?$`)
 	if err != nil {
 		errors = append(errors, err)
 		return nil, errors
@@ -252,6 +252,7 @@ func parseTagFields(file *os.File) ([]TagField, []error) {
 		// See http://play.golang.org/p/zLqvg2qo1D for some testing on the field match.
 		if re.MatchString(line) {
 			data := re.FindStringSubmatch(line)
+			data[1] = strings.Replace(data[1], ":", "", 1)
 			if data[1] != "" {
 				fields = append(fields, field)
 				field = *NewTagField(data[1], strings.Trim(data[2], " "))
