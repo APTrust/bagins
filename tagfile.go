@@ -254,7 +254,9 @@ func parseTagFields(file *os.File) ([]TagField, []error) {
 			data := re.FindStringSubmatch(line)
 			data[1] = strings.Replace(data[1], ":", "", 1)
 			if data[1] != "" {
-				fields = append(fields, field)
+				if field.Label() != "" {
+					fields = append(fields, field)
+				}
 				field = *NewTagField(data[1], strings.Trim(data[2], " "))
 				continue
 			}
@@ -266,6 +268,10 @@ func parseTagFields(file *os.File) ([]TagField, []error) {
 			errors = append(errors, err)
 		}
 	}
+	if field.Label() != "" {
+		fields = append(fields, field)
+	}
+
 	if scanner.Err() != nil {
 		errors = append(errors, scanner.Err())
 	}
