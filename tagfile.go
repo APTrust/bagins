@@ -236,7 +236,7 @@ func validateTagFileName(name string) (err error) {
 */
 func parseTagFields(file *os.File) ([]TagField, []error) {
 	var errors []error
-	re, err := regexp.Compile(`^(\S*\:)?(\s.*)?$`)
+	re, err := regexp.Compile(`^(\S*):?(\s.*)?$`)
 	if err != nil {
 		errors = append(errors, err)
 		return nil, errors
