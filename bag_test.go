@@ -1,16 +1,19 @@
 package bagins_test
 
 import (
+	"fmt"
 	"github.com/APTrust/bagins"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 const (
 	FIXSTRING string = "The quick brown fox jumps over the lazy dog."
-	FIXVALUE  string = "e4d909c290d0fb1ca068ffaddf22cbd0"
+	FIXVALUE  string = "e4d909c290d0fb1ca068ffaddf22cbd0" // md5 of string above
 )
 
 func setupTestBag(bagName string) (*bagins.Bag, error) {
@@ -18,6 +21,31 @@ func setupTestBag(bagName string) (*bagins.Bag, error) {
 	if err != nil {
 		return nil, err
 	}
+	return bag, nil
+}
+
+// Setups up a bag with some custom tag files.
+func setupCustomBag(bagName string) (*bagins.Bag, error) {
+	bag, err := bagins.NewBag(os.TempDir(), bagName, "md5")
+	if err != nil {
+		return nil, err
+	}
+	bag.AddTagfile("bag-info.txt")
+	bagInfo, _ := bag.TagFile("bag-info.txt")
+	bagInfo.Data.SetFields([]bagins.TagField{
+		*bagins.NewTagField("Source-Organization", "APTrust"),
+		*bagins.NewTagField("Bagging-Date", fmt.Sprintf("%s", time.Now())),
+		*bagins.NewTagField("Bag-Count", "1"),
+		*bagins.NewTagField("Internal-Sender-Description", "This is a test bag with no content."),
+		*bagins.NewTagField("Internal-Sender-Identification", fmt.Sprintf("%d", rand.Int31())),
+	})
+	bag.AddTagfile("aptrust-info.txt")
+	aptrustInfo, _ := bag.TagFile("aptrust-info.txt")
+	aptrustInfo.Data.SetFields([]bagins.TagField{
+		*bagins.NewTagField("Title", "APTrust Generic Test Bag"),
+		*bagins.NewTagField("Rights", "Consortia"),
+	})
+
 	return bag, nil
 }
 
@@ -128,6 +156,46 @@ func TestReadBag(t *testing.T) {
 	}
 	if baginfo == nil {
 		t.Errorf("Baginfo unexpectedly nil.")
+	}
+}
+
+func TestReadCustomBag(t *testing.T) {
+	// Setup File to test.
+	fi, _ := ioutil.TempFile("", "TEST_READ_CUSTOM_BAG_FILE.txt")
+	fi.WriteString(FIXSTRING)
+	fi.Close()
+	defer os.Remove(fi.Name())
+
+	// Setup Custom BAg
+	bagName := "__GO_TEST_READ_CUSTOM_BAG__"
+	bagPath := filepath.Join(os.TempDir(), bagName)
+	bag, err := setupCustomBag(bagName)
+	if err != nil {
+		t.Errorf("Unexpected error setting up custom bag: %s", err)
+	}
+	bag.AddFile(fi.Name(), fi.Name())
+	bag.Save()
+	defer os.RemoveAll(bagPath)
+
+	rBag, err := bagins.ReadBag(bag.Path(), []string{"bag-info.txt", "aptrust-info.txt"}, "manifest-md5.txt")
+	if err != nil {
+		t.Errorf("Unexpected error reading custom bag: %s", err)
+	}
+
+	bagInfo, err := rBag.TagFile("bag-info.txt")
+	if err != nil {
+		t.Errorf("Error finding bag-info.txt tag file: %s", err)
+	}
+	if len(bagInfo.Data.Fields()) != 5 {
+		t.Errorf("Expected 5 fields in bag-info.txt but returned %d", len(bagInfo.Data.Fields()))
+	}
+
+	aptrustInfo, err := rBag.TagFile("aptrust-info.txt")
+	if err != nil {
+		t.Errorf("Error finding aptrust-info.txt tag file: %s", err)
+	}
+	if len(aptrustInfo.Data.Fields()) != 2 {
+		t.Error("Expected 2 fields in aptrust-info.txt but returned %d", len(aptrustInfo.Data.Fields()))
 	}
 }
 
