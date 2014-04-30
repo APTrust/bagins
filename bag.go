@@ -19,10 +19,10 @@ package bagins
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
-	"log"
 )
 
 // Represents the basic structure of a bag which is controlled by methods.
@@ -234,6 +234,20 @@ func (b *Bag) TagFile(name string) (*TagFile, error) {
 		return tf, nil
 	}
 	return nil, fmt.Errorf("Unable to find tagfile %s", name)
+}
+
+/*
+  Lists all the current tag files the bag is tracking.
+*/
+func (b *Bag) ListTagFiles() []string {
+	names := make([]string, len(b.tagfiles))
+	i := 0
+	for k, _ := range b.tagfiles {
+		names[i] = k
+		i++
+	}
+
+	return names
 }
 
 /*

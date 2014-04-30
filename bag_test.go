@@ -240,6 +240,27 @@ func TestAddFile(t *testing.T) {
 	}
 }
 
+func TestListTagFiles(t *testing.T) {
+	// Setup Custom BAg
+	bagName := "__GO_TEST_LIST_TAG_FILES__"
+	bagPath := filepath.Join(os.TempDir(), bagName)
+	bag, err := setupCustomBag(bagName)
+	if err != nil {
+		t.Errorf("Unexpected error setting up custom bag: %s", err)
+	}
+	defer os.RemoveAll(bagPath)
+
+	expected := []string{"bagit.txt", "bag-info.txt", "aptrust-info.txt"}
+	if len(bag.ListTagFiles()) != len(expected) {
+		t.Errorf("Expected %d tag files but returned %d", len(expected), len(bag.ListTagFiles()))
+	}
+	for _, name := range expected {
+		if _, err := bag.TagFile(name); err != nil {
+			t.Errorf("Error getting tag file %s: %s", name, err)
+		}
+	}
+}
+
 func TestAddDir(t *testing.T) {
 
 	// Setup source files to test
