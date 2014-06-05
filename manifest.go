@@ -107,7 +107,7 @@ func (m *Manifest) RunChecksums() []error {
 		pth := filepath.Join(filepath.Dir(m.name), key)
 		fileChecksum, err := bagutil.FileChecksum(pth, m.hashFunc())
 		if sum != fileChecksum {
-			invalidSums = append(invalidSums, fmt.Errorf("File checkum %s is not valid for %s:%s", sum, key, fileChecksum))
+			invalidSums = append(invalidSums, fmt.Errorf("File checksum %s is not valid for %s:%s", sum, key, fileChecksum))
 		}
 		if err != nil {
 			invalidSums = append(invalidSums, err)
