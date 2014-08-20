@@ -47,29 +47,44 @@ func (p *Payload) Add(srcPath string, dstPath string, m *Manifest) (string, erro
 	if err != nil {
 		return "", err
 	}
-	// defer src.Close()
+	defer src.Close()
 
-	// TODO simplify this! returns on windows paths are messing with me so I'm
-	// going through this step wise.
 	dstFile := filepath.Join(p.dir, dstPath)
-	if err := os.MkdirAll(filepath.Dir(dstFile), 0766); err != nil {
+
+	var wrtr io.Writer = nil
+
+	absSrcPath, err := filepath.Abs(srcPath)
+	if err != nil {
 		return "", err
 	}
-
-	dst, err := os.Create(dstFile)
+	absDestPath, err := filepath.Abs(dstFile)
 	if err != nil {
 		return "", err
 	}
 
-	wrtr := io.MultiWriter(dst, hsh)
+	// If src and dst are the same, copying with destroy the src.
+	// Just compute the hash.
+	if absSrcPath == absDestPath {
+		wrtr = io.MultiWriter(hsh)
+	} else {
+		// TODO simplify this! returns on windows paths are messing with me so I'm
+		// going through this step wise.
+		if err := os.MkdirAll(filepath.Dir(dstFile), 0766); err != nil {
+			return "", err
+		}
+		dst, err := os.Create(dstFile)
+		if err != nil {
+			return "", err
+		}
+		wrtr = io.MultiWriter(dst, hsh)
+		defer dst.Close()
+	}
 
 	_, err = io.Copy(wrtr, src)
 	if err != nil {
 		return "", err
 	}
 	chkSum := fmt.Sprintf("%x", hsh.Sum(nil))
-	src.Close()
-	dst.Close()
 	return chkSum, err
 }
 

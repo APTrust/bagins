@@ -74,6 +74,39 @@ func TestPayloadAdd(t *testing.T) {
 	}
 }
 
+// Make sure that when we add a file to the payload
+// that is already in the payload directory, it doesn't
+// get clobbered.
+func TestPayloadAddInPlace(t *testing.T) {
+	pDir, _ := ioutil.TempDir("", "_GOTEST_PayloadAdd_")
+	m, _ := bagins.NewManifest(os.TempDir(), "md5")
+	defer os.RemoveAll(pDir)
+
+	p, err := bagins.NewPayload(pDir)
+	if err != nil {
+		t.Error(err)
+	}
+
+	//testFile, _ := ioutil.TempFile("", "_GO_PayloadAdd_TESTFILE_")
+	testFile, err := os.Create(filepath.Join(pDir, "_GO_PayloadAdd_TESTFILE_"))
+	if err != nil {
+		t.Error(err)
+	}
+	testFile.WriteString("Test the checksum")
+	testFile.Close()
+	defer os.Remove(testFile.Name())
+
+	chkSum, err := p.Add(testFile.Name(), filepath.Base(testFile.Name()), m)
+	if err != nil {
+		t.Error(err)
+	}
+	exp := "92d7a9f0f4a30ca782dcae5fe83ca7eb"
+	if exp != chkSum {
+		t.Error("Checksum", chkSum, "did not match", exp)
+	}
+}
+
+
 func TestPayloadAddAll(t *testing.T) {
 	// Setup directories to test on
 	srcDir, _ := ioutil.TempDir("", "_GOTEST_PayloadAddAll_SRCDIR_")
