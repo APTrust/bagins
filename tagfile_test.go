@@ -213,8 +213,12 @@ func TestTagFileCreate(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if _, err := os.Stat(testPath); err != nil {
+	fileInfo, err := os.Stat(testPath)
+	if err != nil {
 		t.Error("File and path", testPath, "not created!")
+	}
+	if fileInfo.Size() == 0 {
+		t.Error("Tag file was created but is empty.")
 	}
 	os.RemoveAll(filepath.Dir(testPath))
 }
