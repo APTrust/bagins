@@ -145,7 +145,8 @@ func ReadBag(pth string, tagfiles []string, manifest string) (*Bag, error) {
 
 	for _, tName := range tagfiles {
 		tf, errs := ReadTagFile(filepath.Join(bag.pth, tName))
-		if len(errs) != 0 {
+		// Warn on Stderr only if we're running as bagmaker
+		if len(errs) != 0 && strings.Index(os.Args[0], "bagmaker") > -1 {
 			log.Println("While parsing tagfiles:", errs)
 		}
 		if tf != nil {
