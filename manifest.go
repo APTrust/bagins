@@ -176,7 +176,7 @@ func parseManifestData(file *os.File) (map[string]string, []error) {
 	// more linear whitespace characters (spaces or tabs) MUST separate
 	// CHECKSUM from FILENAME." as specified here:
 	// http://tools.ietf.org/html/draft-kunze-bagit-10#section-2.1.3
-	re := regexp.MustCompile(`^(\S*)\s*(.\S*)`)
+	re := regexp.MustCompile(`^(\S*)\s*(.*)`)
 
 	scanner := bufio.NewScanner(file)
 	values := make(map[string]string)

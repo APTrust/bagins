@@ -53,7 +53,7 @@ func TestReadManifest(t *testing.T) {
 	exp := make(map[string]string)
 	for i := 0; i < 40; i++ {
 		check := fmt.Sprintf("%x", rand.Int31())
-		fname := fmt.Sprintf("data/testfilename_%d.txt", i)
+		fname := fmt.Sprintf("data/testfilename with spaces %d.txt", i)
 		exp[fname] = check
 	}
 
