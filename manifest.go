@@ -146,6 +146,17 @@ func (m *Manifest) Create() error {
 	return nil
 }
 
+// Returns the contents of the manifest in the form of a string.
+// Useful if you don't want to write directly to disk.
+func (m *Manifest) ToString() string {
+	str := ""
+	for fName, ckSum := range m.Data {
+		str += fmt.Sprintf("%s %s\n", ckSum, fName)
+	}
+	return str
+}
+
+
 // Returns a sting of the filename for this manifest file based on Path, BaseName and Algo
 func (m *Manifest) Name() string {
 	return filepath.Clean(m.name)

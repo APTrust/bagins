@@ -141,3 +141,17 @@ func TestManifestName(t *testing.T) {
 		t.Error("Expected mainfest name %s but returned %s", exp, m.Name())
 	}
 }
+
+func TestManifestToString(t *testing.T) {
+	m, _ := bagins.NewManifest(os.TempDir(), "sha1")
+	m.Data["FileOne.txt"] = fmt.Sprintf("CHECKSUM 0001")
+	m.Data["FileTwo.txt"] = fmt.Sprintf("CHECKSUM 0002")
+	m.Data["FileThree.txt"] = fmt.Sprintf("CHECKSUM 0003")
+
+	str := m.ToString()
+	expected := "CHECKSUM 0001 FileOne.txt\nCHECKSUM 0002 FileTwo.txt\nCHECKSUM 0003 FileThree.txt\n"
+
+	if str != expected {
+		t.Errorf("Manifest.ToString() returned %s \n expected %s", str, expected)
+	}
+}
