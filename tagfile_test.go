@@ -222,3 +222,29 @@ func TestTagFileCreate(t *testing.T) {
 	}
 	os.RemoveAll(filepath.Dir(testPath))
 }
+
+func TestTagFileToString(t *testing.T) {
+	testPath := filepath.Join(os.TempDir(), "golang_test_tagfiles/_GOTEST_bagit.txt")
+	tagFile, _ := bagins.NewTagFile(testPath)
+	tagFile.Data.AddField(*bagins.NewTagField("BagIt-Version", "0.97"))
+	tagFile.Data.AddField(*bagins.NewTagField("Tag-File-Character-Encoding", "UTF-8"))
+	tagFile.Data.AddField(*bagins.NewTagField("Long-Line", "A metadata element MUST consist of a label, a colon, and a value, each separated by optional whitespace.  It is RECOMMENDED that lines not exceed 79 characters in length.  Long values may be continued onto the next line by inserting a newline (LF), a carriage return (CR), or carriage return plus newline (CRLF) and indenting the next line with linear white space (spaces or tabs)."))
+
+
+	str, err := tagFile.ToString()
+	if err != nil {
+		t.Error(err)
+	}
+	expected := `BagIt-Version:  0.97
+Tag-File-Character-Encoding:  UTF-8
+Long-Line:  A metadata element MUST consist of a label, a colon, and a value,
+    each separated by optional whitespace.  It is RECOMMENDED that lines not
+    exceed 79 characters in length.  Long values may be continued onto the next
+    line by inserting a newline (LF), a carriage return (CR), or carriage
+    return plus newline (CRLF) and indenting the next line with linear white
+    space (spaces or tabs).
+`
+	if str != expected {
+		t.Errorf("ToString() returned\n\n%s  \nExpected\n\n%s", str, expected)
+	}
+}

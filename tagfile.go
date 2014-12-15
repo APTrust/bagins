@@ -185,6 +185,21 @@ func (tf *TagFile) Create() error {
 	return nil
 }
 
+// Returns the contents of the tagfile in the form of a string.
+// This is an alternative to Create(), which writes to disk.
+func (tf *TagFile) ToString() (string, error) {
+	str := ""
+	for _, f := range tf.Data.Fields() {
+		field, err := formatField(f.Label(), f.Value())
+		if err != nil {
+			return "", err
+		}
+		str += fmt.Sprintf("%s\n", field)
+	}
+	return str, nil
+}
+
+
 /*
 Takes a tag field key and data and wraps lines at 79 with indented spaces as
 per recommendation in spec.
