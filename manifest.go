@@ -36,9 +36,9 @@ type Manifest struct {
 
 // Returns a pointer to a new manifest or returns an error if improperly named.
 func NewManifest(pth string, hashName string) (*Manifest, error) {
-	if _, err := os.Stat(pth); err != nil {
+	if _, err := os.Stat(filepath.Dir(pth)); err != nil {
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("Unable to create manifest.  Path does not exist: %s", pth)
+			return nil, fmt.Errorf("Unable to create manifest. Path does not exist: %s", pth)
 		} else {
 			return nil, fmt.Errorf("Unexpected error creating manifest: %s", err)
 		}
