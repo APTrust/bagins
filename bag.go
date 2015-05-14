@@ -133,7 +133,7 @@ func ReadBag(pth string, tagfiles []string, manifest string) (*Bag, error) {
 	} else {
 		manifestPath := filepath.Join(bag.pth, manifest)
 		if _, err := os.Stat(manifestPath); err != nil {
-			return nil, fmt.Errorf("Manifest", manifest, "does not exist")
+			return nil, fmt.Errorf("Manifest '%s' does not exist", manifest)
 		}
 		parsedManifest, errs := ReadManifest(manifestPath)
 		if errs != nil && len(errs) > 0 {
