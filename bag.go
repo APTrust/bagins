@@ -27,10 +27,10 @@ import (
 
 // Represents the basic structure of a bag which is controlled by methods.
 type Bag struct {
-	pth      string // path to the bag
-	payload  *Payload
-	Manifest *Manifest
-	tagfiles map[string]*TagFile // relative path in bag as key,
+	pathToFile      string // path to the bag
+	payload         *Payload
+	Manifests       []*Manifest
+	tagfiles        map[string]*TagFile // Key is relative path
 }
 
 // METHODS FOR CREATING AND INITALIZING BAGS
@@ -47,19 +47,24 @@ func NewBag(location string, name string, hashName string) (*Bag, error) {
 	// Create the bag object.
 	bag := new(Bag)
 
+	if bag.Manifests == nil {
+		bag.Manifests = make([]*Manifest, 0)
+	}
+
 	// Start with creating the directories.
-	bag.pth = filepath.Join(location, name)
-	err := os.Mkdir(bag.pth, 0755)
+	bag.pathToFile = filepath.Join(location, name)
+	err := os.Mkdir(bag.pathToFile, 0755)
 	if err != nil {
 		return nil, err
 	}
 	defer bag.Save()
 
 	// Init the manifests map and create the root manifest
-	bag.Manifest, err = NewManifest(bag.Path(), hashName)
+	manifest, err := NewManifest(bag.Path(), hashName)
 	if err != nil {
 		return nil, err
 	}
+	bag.Manifests = append(bag.Manifests, manifest)
 
 	// Init the payload directory and such.
 	plPath := filepath.Join(bag.Path(), "data")
@@ -103,48 +108,80 @@ func (b *Bag) createBagItFile() (*TagFile, error) {
 	Reads the directory provided as the root of a new bag and attemps to parse the file
 	contents into payload, manifests and tagfiles.
 */
-func ReadBag(pth string, tagfiles []string, manifest string) (*Bag, error) {
+func ReadBag(pathToFile string, tagfiles []string, manifest string) (*Bag, error) {
 	// validate existance
-	fi, err := os.Stat(pth)
+	fi, err := os.Stat(pathToFile)
 	if err != nil {
 		return nil, err
 	}
 	if !fi.IsDir() {
-		return nil, fmt.Errorf("%s is not a directory.", pth)
+		return nil, fmt.Errorf("%s is not a directory.", pathToFile)
 	}
 
 	// Get the payload directory.
-	payload, err := NewPayload(filepath.Join(pth, "data"))
+	payload, err := NewPayload(filepath.Join(pathToFile, "data"))
 	if err != nil {
 		return nil, err
 	}
 
 	// Get the bag root directory.
 	bag := new(Bag)
-	bag.pth = pth
+	bag.pathToFile = pathToFile
 	bag.payload = payload
 	bag.tagfiles = make(map[string]*TagFile)
 
-	if manifest == "" {
-		bag.findManifest()
-		if bag.Manifest == nil {
+	if bag.Manifests == nil {
+		bag.Manifests = make([]*Manifest, 0)
+	}
+
+	if len(bag.Manifests) == 0 {
+		errors := bag.findManifests()
+		if errors != nil {
+			errorMessage := ""
+			for _, e := range errors {
+				errorMessage = fmt.Sprintf("%s; %s", errorMessage, e.Error())
+			}
+			return nil, fmt.Errorf(errorMessage)
+		}
+		if len(bag.Manifests) == 0 {
 			return nil, fmt.Errorf("Unable to parse a manifest")
 		}
 	} else {
-		manifestPath := filepath.Join(bag.pth, manifest)
-		if _, err := os.Stat(manifestPath); err != nil {
-			return nil, fmt.Errorf("Manifest '%s' does not exist", manifest)
-		}
-		parsedManifest, errs := ReadManifest(manifestPath)
-		if errs != nil && len(errs) > 0 {
-			return nil, fmt.Errorf("Unable to parse a manifest", errs)
-		} else {
-			bag.Manifest = parsedManifest
+		for i := range bag.Manifests {
+			manifest := bag.Manifests[i]
+			manifestPath := filepath.Join(bag.pathToFile, manifest.Name())
+			if _, err := os.Stat(manifestPath); err != nil {
+				return nil, fmt.Errorf("Manifest '%s' does not exist", manifest.Name())
+			}
+			parsedManifest, errs := ReadManifest(manifestPath)
+			if errs != nil && len(errs) > 0 {
+				errors := ""
+				for _, e := range(errs) {
+					errors = fmt.Sprintf("%s; %s", errors, e.Error())
+				}
+				return nil, fmt.Errorf("Unable to parse manifest %s: %s", manifestPath, errors)
+			} else {
+				bag.Manifests[i] = parsedManifest
+			}
 		}
 	}
 
+	/*
+       Note that we are parsing tags from the expected tag files, and
+       not parsing tags from unexpected tag files. This is per the BagIt
+       spec for V0.97, section 2.2.4, as described here:
+
+       http://tools.ietf.org/html/draft-kunze-bagit-13#section-2.2.4
+
+       A bag MAY contain other tag files that are not defined by this
+       specification.  Implementations SHOULD ignore the content of any
+	   unexpected tag files, except when they are listed in a tag manifest.
+       When unexpected tag files are listed in a tag manifest,
+       implementations MUST only treat the content of those tag files as
+       octet streams for the purpose of checksum verification.
+    */
 	for _, tName := range tagfiles {
-		tf, errs := ReadTagFile(filepath.Join(bag.pth, tName))
+		tf, errs := ReadTagFile(filepath.Join(bag.pathToFile, tName))
 		// Warn on Stderr only if we're running as bagmaker
 		if len(errs) != 0 && strings.Index(os.Args[0], "bagmaker") > -1 {
 			log.Println("While parsing tagfiles:", errs)
@@ -158,14 +195,20 @@ func ReadBag(pth string, tagfiles []string, manifest string) (*Bag, error) {
 	return bag, nil
 }
 
-func (b *Bag) findManifest() {
+func (b *Bag) findManifests() ([]error){
 	bagFiles, _ := b.ListFiles()
 	for _, fName := range bagFiles {
-		pth := filepath.Join(b.pth, fName)
-		if b.Manifest == nil && strings.HasPrefix(fName, "manifest-") {
-			b.Manifest, _ = ReadManifest(pth)
+		filePath := filepath.Join(b.pathToFile, fName)
+		if len(b.Manifests) == 0 &&
+			(strings.HasPrefix(fName, "manifest-") || strings.HasPrefix(fName, "tagmanifest-")) {
+			manifest, errors := ReadManifest(filePath)
+			if errors != nil && len(errors) > 0 {
+				return errors
+			}
+			b.Manifests = append(b.Manifests, manifest)
 		}
 	}
+	return nil
 }
 
 // METHODS FOR MANAGING BAG PAYLOADS
@@ -177,12 +220,12 @@ func (b *Bag) findManifest() {
 			err := b.AddFile("/tmp/myfile.txt", "myfile.txt")
 */
 func (b *Bag) AddFile(src string, dst string) error {
-	fx, err := b.payload.Add(src, dst, b.Manifest)
+	fx, err := b.payload.Add(src, dst, b.Manifests[0])
 	if err != nil {
 		return err
 	}
 
-	b.Manifest.Data[filepath.Join("data", dst)] = fx
+	b.Manifests[0].Data[filepath.Join("data", dst)] = fx
 
 	return err
 }
@@ -192,10 +235,10 @@ func (b *Bag) AddFile(src string, dst string) error {
 // example:
 //			errs := b.AddDir("/tmp/mypreservationfiles")
 func (b *Bag) AddDir(src string) (errs []error) {
-	data, errs := b.payload.AddAll(src, b.Manifest)
+	data, errs := b.payload.AddAll(src, b.Manifests[0])
 
 	for key := range data {
-		b.Manifest.Data[filepath.Join("data", key)] = data[key]
+		b.Manifests[0].Data[filepath.Join("data", key)] = data[key]
 	}
 	return errs
 }
@@ -266,13 +309,11 @@ func (b *Bag) BagInfo() (*TagFile, error) {
 
 // TODO create methods for managing fetch file.
 
-// TODO create methods to manage tagmanifest files.
-
 // METHODS FOR MANAGING OR RETURNING INFORMATION ABOUT THE BAG ITSELF
 
 // Returns the full path of the bag including it's own directory.
 func (b *Bag) Path() string {
-	return b.pth
+	return b.pathToFile
 }
 
 /*
@@ -281,11 +322,14 @@ func (b *Bag) Path() string {
 */
 func (b *Bag) Save() (errs []error) {
 	// Write all the manifest files.
-	if err := b.Manifest.Create(); err != nil {
-		errs = append(errs, err)
+	for i := range b.Manifests {
+		manifest := b.Manifests[i]
+		if err := manifest.Create(); err != nil {
+			errs = append(errs, err)
+		}
 	}
 
-	// TODO Write all the tag files.
+	// Write all the tag files.
 	for _, tf := range b.tagfiles {
 		if err := os.MkdirAll(filepath.Dir(tf.Name()), 0766); err != nil {
 			errs = append(errs, err)
@@ -307,14 +351,14 @@ func (b *Bag) ListFiles() ([]string, error) {
 	var files []string
 
 	// WalkDir function to collect files in the bag..
-	visit := func(pth string, info os.FileInfo, err error) error {
+	visit := func(pathToFile string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 
-		isPayload := strings.HasPrefix(pth, b.payload.Name())
+		isPayload := strings.HasPrefix(pathToFile, b.payload.Name())
 		if !info.IsDir() || !isPayload {
-			fp, err := filepath.Rel(b.Path(), pth)
+			fp, err := filepath.Rel(b.Path(), pathToFile)
 			if err != nil {
 				return err
 			}

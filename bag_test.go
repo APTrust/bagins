@@ -106,7 +106,7 @@ func TestReadBag(t *testing.T) {
 	defer os.Remove(fi.Name())
 
 	if _, err := bagins.ReadBag(fi.Name(), []string{}, ""); err == nil {
-		t.Error("Readbag should thrown an error when trying to open a file: %s", fi.Name())
+		t.Errorf("Readbag should thrown an error when trying to open a file: %s", fi.Name())
 	}
 
 	// It should return an error if the directory does not contain a data subdirectory.
@@ -195,7 +195,7 @@ func TestReadCustomBag(t *testing.T) {
 		t.Errorf("Error finding aptrust-info.txt tag file: %s", err)
 	}
 	if len(aptrustInfo.Data.Fields()) != 2 {
-		t.Error("Expected 2 fields in aptrust-info.txt but returned %d", len(aptrustInfo.Data.Fields()))
+		t.Errorf("Expected 2 fields in aptrust-info.txt but returned %d", len(aptrustInfo.Data.Fields()))
 	}
 }
 
@@ -229,7 +229,11 @@ func TestAddFile(t *testing.T) {
 	}
 
 	// It should have calulated the fixity and put it in the manifest.
-	mf := bag.Manifest
+	if bag.Manifests == nil || len(bag.Manifests) == 0 {
+		t.Error("Bag manifest is missing")
+		return
+	}
+	mf := bag.Manifests[0]
 	expKey := filepath.Join("data", expFile)
 	fx, ok := mf.Data[expKey]
 	if !ok {
@@ -282,11 +286,16 @@ func TestAddDir(t *testing.T) {
 	}
 
 	// It should produce 50 manifest entries
-	if len(bag.Manifest.Data) != 50 {
-		t.Error("Expected 50 manifest entries but returned", len(bag.Manifest.Data))
+	if bag.Manifests == nil || len(bag.Manifests) == 0 {
+		t.Error("Bag manifest is missing")
+		return
+	}
+	manifest := bag.Manifests[0]
+	if len(manifest.Data) != 50 {
+		t.Error("Expected 50 manifest entries but returned", len(manifest.Data))
 	}
 	// It should contain the proper checksums for each file.
-	errs := bag.Manifest.RunChecksums()
+	errs := manifest.RunChecksums()
 	for _, err := range errs {
 		t.Errorf("%s", err)
 	}
@@ -299,7 +308,11 @@ func TestManifest(t *testing.T) {
 	defer os.RemoveAll(bag.Path())
 
 	// It should have the expected name and return no error.
-	mf := bag.Manifest
+	if bag.Manifests == nil || len(bag.Manifests) == 0 {
+		t.Error("Bag manifest is missing")
+		return
+	}
+	mf := bag.Manifests[0]
 	exp := "manifest-md5.txt"
 	if filepath.Base(mf.Name()) != exp {
 		t.Error("Expected manifest name", exp, "but returned", filepath.Base(mf.Name()))
@@ -384,7 +397,7 @@ func TestSave(t *testing.T) {
 	defer os.RemoveAll(bag.Path())
 
 	// Add some data to the manifest and make sure it writes it on close.
-	bag.Manifest.Data["data/fakefile.txt"] = "da909ba395016f2a64b04d706520db6afa74fc95"
+	bag.Manifests[0].Data["data/fakefile.txt"] = "da909ba395016f2a64b04d706520db6afa74fc95"
 
 	// It should not throw an error.
 	if errs := bag.Save(); len(errs) != 0 {
@@ -394,7 +407,7 @@ func TestSave(t *testing.T) {
 	}
 
 	// The manifest file should contain data.
-	content, err := ioutil.ReadFile(bag.Manifest.Name())
+	content, err := ioutil.ReadFile(bag.Manifests[0].Name())
 	if err != nil {
 		t.Error(err)
 	}

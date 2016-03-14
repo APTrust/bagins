@@ -29,16 +29,17 @@ import (
    tagmanifest: http://tools.ietf.org/html/draft-kunze-bagit-09#section-2.2.1
 */
 type Manifest struct {
-	name     string            // Path to the
-	Data     map[string]string // Map of filepath key and checksum value for that file
-	hashFunc func() hash.Hash
+	name          string            // Path to the manifest file
+	manifestType  string            // payload manifest or tag manifest?
+	Data          map[string]string // Key is file path, value is checksum
+	hashFunc      func() hash.Hash
 }
 
 // Returns a pointer to a new manifest or returns an error if improperly named.
-func NewManifest(pth string, hashName string) (*Manifest, error) {
-	if _, err := os.Stat(filepath.Dir(pth)); err != nil {
+func NewManifest(pathToFile string, hashName string) (*Manifest, error) {
+	if _, err := os.Stat(filepath.Dir(pathToFile)); err != nil {
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("Unable to create manifest. Path does not exist: %s", pth)
+			return nil, fmt.Errorf("Unable to create manifest. Path does not exist: %s", pathToFile)
 		} else {
 			return nil, fmt.Errorf("Unexpected error creating manifest: %s", err)
 		}
@@ -54,10 +55,10 @@ func NewManifest(pth string, hashName string) (*Manifest, error) {
 	// TODO: Fix this!
 	// First option is required if user passed a manifest file name into Bag.ReadBag().
 	// Second option is required if no manifest file name was passed in to Bag.ReadBag().
-	if filepath.Dir(pth) != "" && strings.Contains(pth, "manifest-") {
-		m.name = pth
+	if filepath.Dir(pathToFile) != "" && strings.Contains(pathToFile, "manifest-") {
+		m.name = pathToFile
 	} else {
-		m.name = filepath.Join(pth, "manifest-"+strings.ToLower(hashName)+".txt")
+		m.name = filepath.Join(pathToFile, "manifest-"+strings.ToLower(hashName)+".txt")
 	}
 
 	return m, nil
@@ -104,8 +105,8 @@ func (m *Manifest) RunChecksums() []error {
 	var invalidSums []error
 
 	for key, sum := range m.Data {
-		pth := filepath.Join(filepath.Dir(m.name), key)
-		fileChecksum, err := bagutil.FileChecksum(pth, m.hashFunc())
+		pathToFile := filepath.Join(filepath.Dir(m.name), key)
+		fileChecksum, err := bagutil.FileChecksum(pathToFile, m.hashFunc())
 		if sum != fileChecksum {
 			invalidSums = append(invalidSums, fmt.Errorf("File checksum %s is not valid for %s:%s", sum, key, fileChecksum))
 		}
@@ -160,6 +161,11 @@ func (m *Manifest) ToString() string {
 // Returns a sting of the filename for this manifest file based on Path, BaseName and Algo
 func (m *Manifest) Name() string {
 	return filepath.Clean(m.name)
+}
+
+// Returns the type of manifest. Either 'payload' or 'tag'.
+func (m *Manifest) Type() string {
+	return m.manifestType
 }
 
 // Tries to parse the algorithm name from a manifest filename.  Returns
