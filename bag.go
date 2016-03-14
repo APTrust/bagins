@@ -18,6 +18,7 @@ package bagins
 */
 
 import (
+	"github.com/APTrust/bagins/bagutil"
 	"fmt"
 	"log"
 	"os"
@@ -220,13 +221,11 @@ func (b *Bag) findManifests() ([]error){
 			err := b.AddFile("/tmp/myfile.txt", "myfile.txt")
 */
 func (b *Bag) AddFile(src string, dst string) error {
-	fx, err := b.payload.Add(src, dst, b.Manifests[0])
+	digest, err := b.payload.Add(src, dst, b.Manifests[0])
 	if err != nil {
 		return err
 	}
-
-	b.Manifests[0].Data[filepath.Join("data", dst)] = fx
-
+	b.Manifests[0].Data[filepath.Join("data", dst)] = digest
 	return err
 }
 
@@ -253,6 +252,10 @@ func (b *Bag) AddDir(src string) (errs []error) {
 			err := b.AddTagfile("baginfo.txt")
 */
 func (b *Bag) AddTagfile(name string) error {
+	if name == "tagmanifest-md5.txt" || name == "tagmanifest-sha256.txt" {
+		return fmt.Errorf("Don't call AddTagFile() for tagmanifest-md5.txt or " +
+		"tagmanifest-sha256.txt. Those tag manifests are added automatically.")
+	}
 	tagPath := filepath.Join(b.Path(), name)
 	if err := os.MkdirAll(filepath.Dir(tagPath), 0766); err != nil {
 		return err
@@ -265,6 +268,31 @@ func (b *Bag) AddTagfile(name string) error {
 	if err := tf.Create(); err != nil {
 		return err
 	}
+
+	// Add tag file checksums to tag manifests
+	err = b.addChecksumToTagManifest(tagPath, "md5")
+	if err != nil {
+		return err
+	}
+	err = b.addChecksumToTagManifest(tagPath, "sha256")
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (b *Bag) addChecksumToTagManifest(filePath, algorithm string) (error) {
+	tagManifest, err := b.GetOrCreateTagManifest(algorithm)
+	if err != nil {
+		return fmt.Errorf("Error getting tagmanifest-%s.txt: %v", algorithm, err)
+	}
+	checkSum, err := bagutil.CalculateChecksum(filePath, algorithm)
+	if err != nil {
+		return fmt.Errorf("Error calculating %s checksum for file %s: %v",
+			algorithm, filePath, err)
+	}
+	tagManifest.Data[filePath] = checkSum
 	return nil
 }
 
@@ -290,7 +318,6 @@ func (b *Bag) ListTagFiles() []string {
 		names[i] = k
 		i++
 	}
-
 	return names
 }
 
@@ -305,6 +332,37 @@ func (b *Bag) BagInfo() (*TagFile, error) {
 		return nil, err
 	}
 	return tf, nil
+}
+
+// Returns the existing tag manifest with the specified algorithm,
+// or nil. For example, GetTagManifest("sha256") returns either the
+// existing instance of tagmanifest-sha256.txt or nil. See also
+// GetOrCreateTagManifest().
+func (b *Bag) GetTagManifest(algorithm string) (*Manifest) {
+	for _, m := range b.Manifests {
+		if m.Type() == "tagmanifest" && m.Algorithm() == algorithm {
+			return m
+		}
+	}
+	return nil
+}
+
+// Returns the existing tag manifest with the specified algorithm,
+// or creates it if the manifest doesn't already exist. For example,
+// GetOrCreateTagManifest("sha256") returns either the
+// existing instance of tagmanifest-sha256.txt or creates a new
+// one and returns that. See also GetTagManifest().
+func (b *Bag) GetOrCreateTagManifest(algorithm string) (*Manifest, error) {
+	var err error = nil
+	manifest := b.GetTagManifest(algorithm)
+	if manifest == nil {
+		name := fmt.Sprintf("tagmanifest-%s.txt", strings.ToLower(algorithm))
+		manifest, err = NewManifest(name, algorithm)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return manifest, nil
 }
 
 // TODO create methods for managing fetch file.

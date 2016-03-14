@@ -32,6 +32,7 @@ type Manifest struct {
 	name          string            // Path to the manifest file
 	manifestType  string            // payload manifest or tag manifest?
 	Data          map[string]string // Key is file path, value is checksum
+	hashName      string
 	hashFunc      func() hash.Hash
 }
 
@@ -45,6 +46,8 @@ func NewManifest(pathToFile string, hashName string) (*Manifest, error) {
 		}
 	}
 	m := new(Manifest)
+	m.hashName = hashName
+	m.manifestType = "manifest"
 	hashFunc, err := bagutil.LookupHash(hashName)
 	if err != nil {
 		return nil, err
@@ -57,6 +60,8 @@ func NewManifest(pathToFile string, hashName string) (*Manifest, error) {
 	// Second option is required if no manifest file name was passed in to Bag.ReadBag().
 	if filepath.Dir(pathToFile) != "" && strings.Contains(pathToFile, "manifest-") {
 		m.name = pathToFile
+	} else if strings.Contains(pathToFile, "tagmanifest-") {
+		m.manifestType = "tagmanifest"
 	} else {
 		m.name = filepath.Join(pathToFile, "manifest-"+strings.ToLower(hashName)+".txt")
 	}
@@ -161,6 +166,12 @@ func (m *Manifest) ToString() string {
 // Returns a sting of the filename for this manifest file based on Path, BaseName and Algo
 func (m *Manifest) Name() string {
 	return filepath.Clean(m.name)
+}
+
+// Returns the name of the manifest's hashing algorithm.
+// "sha256", "md5", etc.
+func (m *Manifest) Algorithm() string {
+	return m.hashName
 }
 
 // Returns the type of manifest. Either 'payload' or 'tag'.

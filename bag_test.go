@@ -49,6 +49,27 @@ func setupCustomBag(bagName string) (*bagins.Bag, error) {
 	return bag, nil
 }
 
+// Setups up a bag with custom tag files, a custom tag directory,
+// and a tag manifest.
+func setupTagfileBag(bagName string) (*bagins.Bag, error) {
+	bag, err := setupCustomBag(bagName)
+	if err != nil {
+		return nil, err
+	}
+	bag.AddTagfile("custom-tags/player-stats.txt")
+	customTagFile, _ := bag.TagFile("custom-tags/player-stats.txt")
+	customTagFile.Data.SetFields([]bagins.TagField{
+		*bagins.NewTagField("Batting-Average", ".340"),
+		*bagins.NewTagField("What-Time-Is-It", fmt.Sprintf("%s", time.Now())),
+		*bagins.NewTagField("ERA", "1.63"),
+		*bagins.NewTagField("Bats", "Left"),
+		*bagins.NewTagField("Throws", "Right"),
+	})
+	// XXXXXXXXXXXXXXXXXXXXXXX
+	// TODO: Add custom tag dir with custom tag files
+	return bag, nil
+}
+
 func TestNewBag(t *testing.T) {
 
 	// It should raise an error if the destination dir does not exist.

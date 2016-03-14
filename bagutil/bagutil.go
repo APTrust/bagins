@@ -66,3 +66,30 @@ func LookupHash(algo string) (func() hash.Hash, error) {
 	}
 	return nil, fmt.Errorf("Invalid hash name %s:  Must be one of md5, sha1, sha256, sha512, sha224, sha284")
 }
+
+// Calculates the checksum of the file at srcPath, using the
+// the checksum algorithm specified by algo. Returns the checksum
+// as a hex-encoded string.
+func CalculateChecksum(srcPath, algo string) (string, error) {
+
+	hashAlgorithm, err := LookupHash(algo)
+	if err != nil {
+		return "", err
+	}
+	hashFunc := hashAlgorithm()
+
+	src, err := os.Open(srcPath)
+	if err != nil {
+		return "", err
+	}
+	defer src.Close()
+
+//	wrtr = io.MultiWriter(hsh)
+
+	_, err = io.Copy(hashFunc, src)
+	if err != nil {
+		return "", err
+	}
+	checkSum := fmt.Sprintf("%x", hashFunc.Sum(nil))
+	return checkSum, err
+}

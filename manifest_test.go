@@ -148,10 +148,21 @@ func TestManifestToString(t *testing.T) {
 	m.Data["FileTwo.txt"] = fmt.Sprintf("CHECKSUM 0002")
 	m.Data["FileThree.txt"] = fmt.Sprintf("CHECKSUM 0003")
 
-	str := m.ToString()
-	expected := "CHECKSUM 0001 FileOne.txt\nCHECKSUM 0002 FileTwo.txt\nCHECKSUM 0003 FileThree.txt\n"
+	output := m.ToString()
+	lines := []string {
+		"CHECKSUM 0001 FileOne.txt\n",
+		"CHECKSUM 0002 FileTwo.txt\n",
+		"CHECKSUM 0003 FileThree.txt\n",
+	}
 
-	if str != expected {
-		t.Errorf("Manifest.ToString() returned %s \n expected %s", str, expected)
+	for _, line := range lines {
+		if !strings.Contains(output, line) {
+			t.Errorf("Manifest.ToString() did not return line %s", line)
+		}
+	}
+	expectedLength := len(lines[0]) + len(lines[1]) + len(lines[2])
+	if len(output) != expectedLength {
+		t.Errorf("Manifest.ToString() returned %d characters, expected %d",
+			len(output), expectedLength)
 	}
 }
