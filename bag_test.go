@@ -1,14 +1,11 @@
 package bagins_test
 
 import (
-	"fmt"
 	"github.com/APTrust/bagins"
 	"io/ioutil"
-	"math/rand"
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 )
 
 const (
@@ -34,10 +31,10 @@ func setupCustomBag(bagName string) (*bagins.Bag, error) {
 	bagInfo, _ := bag.TagFile("bag-info.txt")
 	bagInfo.Data.SetFields([]bagins.TagField{
 		*bagins.NewTagField("Source-Organization", "APTrust"),
-		*bagins.NewTagField("Bagging-Date", fmt.Sprintf("%s", time.Now())),
+		*bagins.NewTagField("Bagging-Date", "2016-06-01"),
 		*bagins.NewTagField("Bag-Count", "1"),
 		*bagins.NewTagField("Internal-Sender-Description", "This is a test bag with no content."),
-		*bagins.NewTagField("Internal-Sender-Identification", fmt.Sprintf("%d", rand.Int31())),
+		*bagins.NewTagField("Internal-Sender-Identification", "Bag XYZ"),
 	})
 	bag.AddTagfile("aptrust-info.txt")
 	aptrustInfo, _ := bag.TagFile("aptrust-info.txt")
@@ -73,7 +70,7 @@ func setupTagfileBag(bagName string) (*bagins.Bag, error) {
 	customTagFile2, _ := bag.TagFile("custom-tags/player-stats.txt")
 	customTagFile2.Data.SetFields([]bagins.TagField{
 		*bagins.NewTagField("Batting-Average", ".340"),
-		*bagins.NewTagField("What-Time-Is-It", fmt.Sprintf("%s", time.Now())),
+		*bagins.NewTagField("What-Time-Is-It", "2016-06-01T12:00:00Z"),
 		*bagins.NewTagField("ERA", "1.63"),
 		*bagins.NewTagField("Bats", "Left"),
 		*bagins.NewTagField("Throws", "Right"),
@@ -239,7 +236,7 @@ func TestReadCustomBag(t *testing.T) {
 		t.Errorf("Expected 2 fields in aptrust-info.txt but returned %d", len(aptrustInfo.Data.Fields()))
 	}
 
-	// Check manifests
+	// Check payload manifests
 	payloadManifests := rBag.GetManifests(bagins.PayloadManifest)
 	if len(payloadManifests) != 2 {
 		t.Errorf("Expected 2 payload manifests, got %d", len(payloadManifests))
@@ -262,7 +259,7 @@ func TestReadCustomBag(t *testing.T) {
 		}
 
 		if payloadManifests[1].Algorithm() != "sha256" {
-			t.Errorf("Expected first manifest to be sha256, got %s", payloadManifests[0].Algorithm())
+			t.Errorf("Expected first manifest to be sha256, got %s", payloadManifests[1].Algorithm())
 		}
 		// Payload sha256 manifest should have one entry
 		if len(payloadManifests[1].Data) != 1 {
@@ -277,9 +274,153 @@ func TestReadCustomBag(t *testing.T) {
 				t.Errorf("Incorrect md5 checksum. Got %s", value)
 			}
 		}
-
 	}
 }
+
+func TestReadTagFileBag(t *testing.T) {
+	// Setup File to test.
+	testFileName := "TEST_READ_TAGFILE_BAG_FILE.txt"
+	fi, _ := ioutil.TempFile("", testFileName)
+	fi.WriteString(FIXSTRING)
+	fi.Close()
+	defer os.Remove(fi.Name())
+
+	// Setup bag with custom tag files
+	bagName := "__GO_TEST_READ_TAGFILE_BAG__"
+	bagPath := filepath.Join(os.TempDir(), bagName)
+	bag, err := setupTagfileBag(bagName)
+	if err != nil {
+		t.Errorf("Unexpected error setting up tagfile bag: %s", err)
+	}
+	bag.AddFile(fi.Name(), testFileName)
+	bag.Save()
+	defer os.RemoveAll(bagPath)
+
+	rBag, err := bagins.ReadBag(bag.Path(), []string{"bag-info.txt", "aptrust-info.txt"})
+	if err != nil {
+		t.Errorf("Unexpected error reading custom bag: %s", err)
+	}
+
+	bagInfo, err := rBag.TagFile("bag-info.txt")
+	if err != nil {
+		t.Errorf("Error finding bag-info.txt tag file: %s", err)
+	}
+	if len(bagInfo.Data.Fields()) != 5 {
+		t.Errorf("Expected 5 fields in bag-info.txt but returned %d", len(bagInfo.Data.Fields()))
+	}
+
+	aptrustInfo, err := rBag.TagFile("aptrust-info.txt")
+	if err != nil {
+		t.Errorf("Error finding aptrust-info.txt tag file: %s", err)
+	}
+	if len(aptrustInfo.Data.Fields()) != 2 {
+		t.Errorf("Expected 2 fields in aptrust-info.txt but returned %d", len(aptrustInfo.Data.Fields()))
+	}
+
+	// Check payload manifests
+	payloadManifests := rBag.GetManifests(bagins.PayloadManifest)
+	if len(payloadManifests) != 2 {
+		t.Errorf("Expected 2 payload manifests, got %d", len(payloadManifests))
+	} else {
+		if payloadManifests[0].Algorithm() != "md5" {
+			t.Errorf("Expected first manifest to be md5, got %s", payloadManifests[0].Algorithm())
+		}
+		// Payload md5 manifest should have one entry
+		if len(payloadManifests[0].Data) != 1 {
+			t.Errorf("Payload manifest should have one entry, found %s", len(payloadManifests[0].Data))
+		}
+		for key, value := range payloadManifests[0].Data {
+			dataFilePath := filepath.Join("data", testFileName)
+			if key != dataFilePath {
+				t.Errorf("Missing expected manifest entry for %s. Got %s", dataFilePath, key)
+			}
+			if value != "e4d909c290d0fb1ca068ffaddf22cbd0" {
+				t.Errorf("Incorrect md5 checksum. Got %s", value)
+			}
+		}
+
+		if payloadManifests[1].Algorithm() != "sha256" {
+			t.Errorf("Expected first manifest to be sha256, got %s", payloadManifests[1].Algorithm())
+		}
+		// Payload sha256 manifest should have one entry
+		if len(payloadManifests[1].Data) != 1 {
+			t.Errorf("Payload manifest should have one entry, found %s", len(payloadManifests[1].Data))
+		}
+		for key, value := range payloadManifests[1].Data {
+			dataFilePath := filepath.Join("data", testFileName)
+			if key != dataFilePath {
+				t.Errorf("Missing expected manifest entry for %s. Got %s", dataFilePath, key)
+			}
+			if value != "ef537f25c895bfa782526529a9b63d97aa631564d5d789c2b765448c8635fb6c" {
+				t.Errorf("Incorrect md5 checksum. Got %s", value)
+			}
+		}
+	}
+
+	// Check tag manifests
+	tagManifests := rBag.GetManifests(bagins.TagManifest)
+	if len(tagManifests) != 2 {
+		t.Errorf("Expected 2 tag manifests, got %d", len(tagManifests))
+	} else {
+		if tagManifests[0].Algorithm() != "md5" {
+			t.Errorf("Expected first manifest to be md5, got %s", tagManifests[0].Algorithm())
+		}
+		// Tag md5 manifest should have six entries
+		if len(tagManifests[0].Data) != 6 {
+			t.Errorf("Tag manifest should have 6 entries, found %s", len(tagManifests[0].Data))
+		}
+
+		// Check the fixity values
+		md5Entries := make(map[string]string, 6)
+		md5Entries[filepath.Join(bagPath, "aptrust-info.txt")] = "6dd711392d4661322acc469a30565f68"
+		md5Entries[filepath.Join(bagPath, "bag-info.txt")] = "88190858fd93609ae51ca1f06ee575f1"
+		md5Entries[filepath.Join(bagPath, "bagit.txt")] = "ada799b7e0f1b7a1dc86d4e99df4b1f4"
+		md5Entries[filepath.Join(bagPath, "laser-tag.txt")] = "29251712228b36927c43157fe5808552"
+		md5Entries[filepath.Join(bagPath, "custom-tags", "player-stats.txt")] = "dfa872f6da2af8087bea5f7ab1dbc1fa"
+		md5Entries[filepath.Join(bagPath, "custom-tags", "tv-schedule.txt")] = "118df3be000eae34d6e6dbf7f56c649b"
+
+		for key, expectedValue := range md5Entries {
+			actualValue := tagManifests[0].Data[key]
+			if actualValue != expectedValue {
+				t.Errorf("For tag file %s, expected md5 %s, but got %s",
+					key, expectedValue, actualValue)
+			}
+		}
+
+		if tagManifests[1].Algorithm() != "sha256" {
+			t.Errorf("Expected first manifest to be sha256, got %s", tagManifests[1].Algorithm())
+		}
+		// Tag sha256 manifest should have six entries
+		if len(tagManifests[1].Data) != 6 {
+			t.Errorf("Tag manifest should have six entries, found %s", len(tagManifests[1].Data))
+		}
+
+		// Check fixity values
+		// Will these checksums break on Windows, where end-of-line is CRLF?
+		sha256Entries := make(map[string]string, 6)
+		sha256Entries[filepath.Join(bagPath, "aptrust-info.txt")] =
+			"ffe2ab04b87db85886fcfd013c9f09e094b636ca233cd0cbbd1ea300e7a5352c"
+		sha256Entries[filepath.Join(bagPath, "bag-info.txt")] =
+			"f0ce035c2ee789a7f8821d6f174a75619c575eea0311c47d03149807d252804d"
+		sha256Entries[filepath.Join(bagPath, "bagit.txt")] =
+			"49b477e8662d591f49fce44ca5fc7bfe76c5a71f69c85c8d91952a538393e5f4"
+		sha256Entries[filepath.Join(bagPath, "laser-tag.txt")] =
+			"163be000df169eafd84fa0cef6028a4711e53bd3abf9e8c54603035bb92bda95"
+		sha256Entries[filepath.Join(bagPath, "custom-tags", "player-stats.txt")] =
+			"83137fc6d88212250153bd713954da1d1c5a69c57a55ff97cac07ca6db7ec34d"
+		sha256Entries[filepath.Join(bagPath, "custom-tags", "tv-schedule.txt")] =
+			"fbf223502fe7f470363346283620401d04e77fe43a9a74faa682eebe28417e7c"
+
+		for key, expectedValue := range sha256Entries {
+			actualValue := tagManifests[1].Data[key]
+			if actualValue != expectedValue {
+				t.Errorf("For tag file %s, expected sha256 %s, but got %s",
+					key, expectedValue, actualValue)
+			}
+		}
+	}
+}
+
 
 // It should place an appropriate file in the data directory and add the fixity to the manifest.
 func TestAddFile(t *testing.T) {

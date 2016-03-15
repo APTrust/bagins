@@ -231,9 +231,11 @@ func (b *Bag) findManifests() ([]error){
 	if len(b.Manifests) == 0 {
 		bagFiles, _ := b.ListFiles()
 		for _, fName := range bagFiles {
+
 			filePath := filepath.Join(b.pathToFile, fName)
 			payloadManifestPrefix := filepath.Join(b.pathToFile, "manifest-")
 			tagManifestPrefix := filepath.Join(b.pathToFile, "tagmanifest-")
+
 			if strings.HasPrefix(filePath, payloadManifestPrefix) ||
 				strings.HasPrefix(filePath, tagManifestPrefix) {
 				manifest, errors := ReadManifest(filePath)
@@ -380,6 +382,7 @@ func (b *Bag) Path() string {
 */
 func (b *Bag) Save() (errs []error) {
 	// Write all the tag files.
+	tagManifests := b.GetManifests(TagManifest)
 	for _, tf := range b.tagfiles {
 		if err := os.MkdirAll(filepath.Dir(tf.Name()), 0766); err != nil {
 			errs = append(errs, err)
@@ -389,7 +392,6 @@ func (b *Bag) Save() (errs []error) {
 		}
 
 		// Add tag file checksums to tag manifests
-		tagManifests := b.GetManifests(TagManifest)
 		for i := range tagManifests {
 			manifest := tagManifests[i]
 			checksum, err := bagutil.FileChecksum(tf.Name(), manifest.hashFunc())
@@ -405,9 +407,8 @@ func (b *Bag) Save() (errs []error) {
 	}
 
 	// Write all the manifest files.
-	payloadManifests := b.GetManifests(PayloadManifest)
-	for i := range payloadManifests {
-		manifest := payloadManifests[i]
+	for i := range b.Manifests {
+		manifest := b.Manifests[i]
 		if err := manifest.Create(); err != nil {
 			errs = append(errs, err)
 		}
