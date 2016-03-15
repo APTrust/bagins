@@ -79,7 +79,7 @@ func NewBag(location string, name string, hashNames []string, createTagManifests
 
 		if createTagManifests == true {
 			tagManifestName := fmt.Sprintf("tagmanifest-%s.txt", lcHashName)
-			fullPath := filepath.Join(location, tagManifestName)
+			fullPath := filepath.Join(bag.Path(), tagManifestName)
 			tagmanifest, err := NewManifest(fullPath, lcHashName)
 			if err != nil {
 				return nil, err
@@ -232,7 +232,10 @@ func (b *Bag) findManifests() ([]error){
 		bagFiles, _ := b.ListFiles()
 		for _, fName := range bagFiles {
 			filePath := filepath.Join(b.pathToFile, fName)
-			if strings.HasPrefix(fName, "manifest-") || strings.HasPrefix(fName, "tagmanifest-") {
+			payloadManifestPrefix := filepath.Join(b.pathToFile, "manifest-")
+			tagManifestPrefix := filepath.Join(b.pathToFile, "tagmanifest-")
+			if strings.HasPrefix(filePath, payloadManifestPrefix) ||
+				strings.HasPrefix(filePath, tagManifestPrefix) {
 				manifest, errors := ReadManifest(filePath)
 				if errors != nil && len(errors) > 0 {
 					return errors
@@ -404,7 +407,7 @@ func (b *Bag) Save() (errs []error) {
 	// Write all the manifest files.
 	payloadManifests := b.GetManifests(PayloadManifest)
 	for i := range payloadManifests {
-		manifest := b.Manifests[i]
+		manifest := payloadManifests[i]
 		if err := manifest.Create(); err != nil {
 			errs = append(errs, err)
 		}

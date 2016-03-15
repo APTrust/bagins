@@ -45,7 +45,10 @@ func setupCustomBag(bagName string) (*bagins.Bag, error) {
 		*bagins.NewTagField("Title", "APTrust Generic Test Bag"),
 		*bagins.NewTagField("Rights", "Consortia"),
 	})
-
+	errors := bag.Save()
+	if errors != nil && len(errors) > 0 {
+		return nil, errors[0]
+	}
 	return bag, nil
 }
 
@@ -56,17 +59,33 @@ func setupTagfileBag(bagName string) (*bagins.Bag, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// Tag file in top-level directory
+	bag.AddTagfile("laser-tag.txt")
+	customTagFile1, _ := bag.TagFile("laser-tag.txt")
+	customTagFile1.Data.SetFields([]bagins.TagField{
+		*bagins.NewTagField("tic", "tac"),
+		*bagins.NewTagField("tick", "tock"),
+	})
+
+	// Tag files in custom directory
 	bag.AddTagfile("custom-tags/player-stats.txt")
-	customTagFile, _ := bag.TagFile("custom-tags/player-stats.txt")
-	customTagFile.Data.SetFields([]bagins.TagField{
+	customTagFile2, _ := bag.TagFile("custom-tags/player-stats.txt")
+	customTagFile2.Data.SetFields([]bagins.TagField{
 		*bagins.NewTagField("Batting-Average", ".340"),
 		*bagins.NewTagField("What-Time-Is-It", fmt.Sprintf("%s", time.Now())),
 		*bagins.NewTagField("ERA", "1.63"),
 		*bagins.NewTagField("Bats", "Left"),
 		*bagins.NewTagField("Throws", "Right"),
 	})
-	// XXXXXXXXXXXXXXXXXXXXXXX
-	// TODO: Add custom tag dir with custom tag files
+	bag.AddTagfile("custom-tags/tv-schedule.txt")
+	customTagFile3, _ := bag.TagFile("custom-tags/tv-schedule.txt")
+	customTagFile3.Data.SetFields([]bagins.TagField{
+		*bagins.NewTagField("3:00PM", "House Party"),
+		*bagins.NewTagField("4:00PM", "Dexter"),
+	})
+
+	bag.Save()
 	return bag, nil
 }
 
@@ -188,7 +207,7 @@ func TestReadCustomBag(t *testing.T) {
 	fi.Close()
 	defer os.Remove(fi.Name())
 
-	// Setup Custom BAg
+	// Setup Custom Bag
 	bagName := "__GO_TEST_READ_CUSTOM_BAG__"
 	bagPath := filepath.Join(os.TempDir(), bagName)
 	bag, err := setupCustomBag(bagName)
@@ -218,6 +237,19 @@ func TestReadCustomBag(t *testing.T) {
 	}
 	if len(aptrustInfo.Data.Fields()) != 2 {
 		t.Errorf("Expected 2 fields in aptrust-info.txt but returned %d", len(aptrustInfo.Data.Fields()))
+	}
+
+	// Check manifests
+	payloadManifests := rBag.GetManifests(bagins.PayloadManifest)
+	if len(payloadManifests) != 2 {
+		t.Errorf("Expected 2 payload manifests, got %d", len(payloadManifests))
+	} else {
+		if payloadManifests[0].Algorithm() != "md5" {
+			t.Errorf("Expected first manifest to be md5, got %s", payloadManifests[0].Algorithm())
+		}
+		if payloadManifests[1].Algorithm() != "sha256" {
+			t.Errorf("Expected first manifest to be sha256, got %s", payloadManifests[0].Algorithm())
+		}
 	}
 }
 
