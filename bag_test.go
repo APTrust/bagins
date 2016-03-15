@@ -17,7 +17,7 @@ const (
 )
 
 func setupTestBag(bagName string) (*bagins.Bag, error) {
-	bag, err := bagins.NewBag(os.TempDir(), bagName, "md5")
+	bag, err := bagins.NewBag(os.TempDir(), bagName, []string{"md5"}, false)
 	if err != nil {
 		return nil, err
 	}
@@ -26,7 +26,7 @@ func setupTestBag(bagName string) (*bagins.Bag, error) {
 
 // Setups up a bag with some custom tag files.
 func setupCustomBag(bagName string) (*bagins.Bag, error) {
-	bag, err := bagins.NewBag(os.TempDir(), bagName, "md5")
+	bag, err := bagins.NewBag(os.TempDir(), bagName, []string{"md5", "sha256"}, true)
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +74,7 @@ func TestNewBag(t *testing.T) {
 
 	// It should raise an error if the destination dir does not exist.
 	badLocation := filepath.Join(os.TempDir(), "/GOTESTNOT_EXISTs/")
-	_, err := bagins.NewBag(badLocation, "_GOFAILBAG_", "md5")
+	_, err := bagins.NewBag(badLocation, "_GOFAILBAG_", []string{"md5"}, false)
 	if err == nil {
 		t.Error("NewBag function does not recognize when a directory does not exist!")
 	}
@@ -83,7 +83,7 @@ func TestNewBag(t *testing.T) {
 	os.MkdirAll(filepath.Join(badLocation, "_GOFAILBAG_"), 0766)
 	defer os.RemoveAll(badLocation)
 
-	_, err = bagins.NewBag(badLocation, "_GOFAILBAG_", "md5")
+	_, err = bagins.NewBag(badLocation, "_GOFAILBAG_", []string{"md5"}, false)
 	if err == nil {
 		t.Error("Error not thrown when bag already exists as expected.")
 	}
@@ -116,7 +116,7 @@ func TestReadBag(t *testing.T) {
 
 	// It should return an error when passed a path that doesn't exist.
 	badPath := "/thispath/isbad"
-	if _, err := bagins.ReadBag(badPath, []string{}, ""); err == nil {
+	if _, err := bagins.ReadBag(badPath, []string{}); err == nil {
 		t.Errorf("Path %s not detected as bad as expected.", badPath)
 	}
 
@@ -126,7 +126,7 @@ func TestReadBag(t *testing.T) {
 	fi.Close()
 	defer os.Remove(fi.Name())
 
-	if _, err := bagins.ReadBag(fi.Name(), []string{}, ""); err == nil {
+	if _, err := bagins.ReadBag(fi.Name(), []string{}); err == nil {
 		t.Errorf("Readbag should thrown an error when trying to open a file: %s", fi.Name())
 	}
 
@@ -134,26 +134,27 @@ func TestReadBag(t *testing.T) {
 	pDir, _ := ioutil.TempDir("", "_GOTEST_ReadBag_Payload_")
 	defer os.RemoveAll(pDir)
 
-	if _, err := bagins.ReadBag(pDir, []string{}, ""); err == nil {
+	if _, err := bagins.ReadBag(pDir, []string{}); err == nil {
 		t.Errorf("Not returning expected error when directory has no data subdirectory for %s", pDir)
 	}
 
 	os.Mkdir(filepath.Join(pDir, "data"), os.ModePerm) // Set up data directory for later tests.
 
 	// It should return an error if there is no manifest file.
-	if _, err := bagins.ReadBag(pDir, []string{}, ""); err == nil {
+	if _, err := bagins.ReadBag(pDir, []string{}); err == nil {
 		t.Errorf("Not returning expected error when no manifest file is present in %s", pDir)
 	}
 
 	// It should return an error if it has a bad manifest name.
 	ioutil.WriteFile(filepath.Join(pDir, "manifest-sha404.txt"), []byte{}, os.ModePerm)
-	if _, err := bagins.ReadBag(pDir, []string{}, ""); err == nil {
+	if _, err := bagins.ReadBag(pDir, []string{}); err == nil {
 		t.Errorf("Not returning expected error when a bad manifest filename is only option %s", pDir)
 	}
+	os.Remove(filepath.Join(pDir, "manifest-sha404.txt"))
 
 	// It should return a bag if a valid manifest and data directory exist.
 	ioutil.WriteFile(filepath.Join(pDir, "manifest-sha256.txt"), []byte{}, os.ModePerm)
-	if _, err := bagins.ReadBag(pDir, []string{}, ""); err != nil {
+	if _, err := bagins.ReadBag(pDir, []string{}); err != nil {
 		t.Errorf("Unexpected error when trying to read raw bag with valid data and manifest: %s", err)
 	}
 
@@ -167,7 +168,7 @@ func TestReadBag(t *testing.T) {
 	}
 	tb.Save()
 
-	testBag, err := bagins.ReadBag(bagPath, []string{"bagit.txt"}, "manifest-md5.txt")
+	testBag, err := bagins.ReadBag(bagPath, []string{"bagit.txt"})
 	if err != nil {
 		t.Errorf("Unexpected error reading test bag: %s", err)
 	}
@@ -198,7 +199,7 @@ func TestReadCustomBag(t *testing.T) {
 	bag.Save()
 	defer os.RemoveAll(bagPath)
 
-	rBag, err := bagins.ReadBag(bag.Path(), []string{"bag-info.txt", "aptrust-info.txt"}, "manifest-md5.txt")
+	rBag, err := bagins.ReadBag(bag.Path(), []string{"bag-info.txt", "aptrust-info.txt"})
 	if err != nil {
 		t.Errorf("Unexpected error reading custom bag: %s", err)
 	}

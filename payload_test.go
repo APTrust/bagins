@@ -64,13 +64,13 @@ func TestPayloadAdd(t *testing.T) {
 	testFile.Close()
 	defer os.Remove(testFile.Name())
 
-	chkSum, err := p.Add(testFile.Name(), filepath.Base(testFile.Name()), m)
+	chkSum, err := p.Add(testFile.Name(), filepath.Base(testFile.Name()), []*bagins.Manifest{m})
 	if err != nil {
 		t.Error(err)
 	}
 	exp := "92d7a9f0f4a30ca782dcae5fe83ca7eb"
-	if exp != chkSum {
-		t.Error("Checksum", chkSum, "did not match", exp)
+	if exp != chkSum["md5"] {
+		t.Error("Checksum", chkSum["md5"], "did not match", exp)
 	}
 }
 
@@ -96,13 +96,13 @@ func TestPayloadAddInPlace(t *testing.T) {
 	testFile.Close()
 	defer os.Remove(testFile.Name())
 
-	chkSum, err := p.Add(testFile.Name(), filepath.Base(testFile.Name()), m)
+	chkSum, err := p.Add(testFile.Name(), filepath.Base(testFile.Name()), []*bagins.Manifest{m})
 	if err != nil {
 		t.Error(err)
 	}
 	exp := "92d7a9f0f4a30ca782dcae5fe83ca7eb"
-	if exp != chkSum {
-		t.Error("Checksum", chkSum, "did not match", exp)
+	if exp != chkSum["md5"] {
+		t.Error("Checksum", chkSum["md5"], "did not match", exp)
 	}
 }
 
@@ -124,24 +124,24 @@ func TestPayloadAddAll(t *testing.T) {
 	}
 
 	p, _ := bagins.NewPayload(pDir)
-	fxs, errs := p.AddAll(srcDir, m)
+	checksums, errs := p.AddAll(srcDir, []*bagins.Manifest{m})
 
 	// It should not return an error.
 	if errs != nil {
 		t.Errorf("Add all returned %d errors", len(errs))
 	}
 	// It should have fixity values for 100 files
-	if len(fxs) != 100 {
-		t.Errorf("Expected 100 fixity values but returned %d", len(fxs))
+	if len(checksums) != 100 {
+		t.Errorf("Expected 100 fixity values but returned %d", len(checksums))
 	}
 
-	for key := range fxs {
+	for key := range checksums {
 		fileChk, err := bagutil.FileChecksum(filepath.Join(p.Name(), key), md5.New())
 		if err != nil {
 			t.Errorf(" %s", err)
 		}
-		if fxs[key] != fileChk {
-			t.Error("Expected", fxs[key], "but returned", fileChk)
+		if checksums[key]["md5"] != fileChk {
+			t.Error("Expected", checksums[key]["md5"], "but returned", fileChk)
 		}
 	}
 
@@ -189,7 +189,7 @@ func BenchmarkPayload(b *testing.B) {
 
 	p, _ := bagins.NewPayload(pDir)
 
-	fxs, err := p.AddAll(srcDir, m)
+	checksums, err := p.AddAll(srcDir, []*bagins.Manifest{m})
 	if err != nil {
 		b.Error(err)
 	}
@@ -197,13 +197,13 @@ func BenchmarkPayload(b *testing.B) {
 	b.StopTimer()
 
 	// Make sure the actual values check out.
-	for key := range fxs {
+	for key := range checksums {
 		fileChk, err := bagutil.FileChecksum(filepath.Join(p.Name(), key), md5.New())
 		if err != nil {
 			b.Errorf(" %s", err)
 		}
-		if fxs[key] != fileChk {
-			b.Error("Expected", fxs[key], "but returned", fileChk)
+		if checksums[key]["md5"] != fileChk {
+			b.Error("Expected", checksums[key]["md5"], "but returned", fileChk)
 		}
 	}
 

@@ -41,10 +41,18 @@ type Bag struct {
  with the provided name.  Returns an error if the location does not exist or if the
  bag already exist.
 
+ This constructor will automatically create manifests with the
+ specified hash algorithms. Supported algorithms include:
+
+ "md5", "sha1", "sha256", "sha512", "sha224" and "sha384"
+
+ If param createTagManifests is true, this will also create tag manifests
+ with the specified algorithms.
+
  example:
-		NewBag("archive/bags", "bag-34323", "sha256")
+		NewBag("archive/bags", "bag-34323", ["sha256", "md5"], true)
 */
-func NewBag(location string, name string, hashName string) (*Bag, error) {
+func NewBag(location string, name string, hashNames []string, createTagManifests bool) (*Bag, error) {
 	// Create the bag object.
 	bag := new(Bag)
 
@@ -58,14 +66,27 @@ func NewBag(location string, name string, hashName string) (*Bag, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer bag.Save()
+	//defer bag.Save()
 
-	// Init the manifests map and create the root manifest
-	manifest, err := NewManifest(bag.Path(), hashName)
-	if err != nil {
-		return nil, err
+	// Init the manifests and tag manifests
+	for _, hashName := range hashNames {
+		lcHashName := strings.ToLower(hashName)
+		manifest, err := NewManifest(bag.Path(), lcHashName)
+		if err != nil {
+			return nil, err
+		}
+		bag.Manifests = append(bag.Manifests, manifest)
+
+		if createTagManifests == true {
+			tagManifestName := fmt.Sprintf("tagmanifest-%s.txt", lcHashName)
+			fullPath := filepath.Join(location, tagManifestName)
+			tagmanifest, err := NewManifest(fullPath, lcHashName)
+			if err != nil {
+				return nil, err
+			}
+			bag.Manifests = append(bag.Manifests, tagmanifest)
+		}
 	}
-	bag.Manifests = append(bag.Manifests, manifest)
 
 	// Init the payload directory and such.
 	plPath := filepath.Join(bag.Path(), "data")
@@ -85,6 +106,15 @@ func NewBag(location string, name string, hashName string) (*Bag, error) {
 		return nil, err
 	}
 	bag.tagfiles["bagit.txt"] = tf
+
+	errors := bag.Save()
+	if err != nil && len(errors) > 0 {
+		message := ""
+		for _, e := range errors {
+			message = fmt.Sprintf("%s, %s", message, e.Error())
+		}
+		return nil, fmt.Errorf(message)
+	}
 
 	return bag, nil
 }
@@ -109,7 +139,7 @@ func (b *Bag) createBagItFile() (*TagFile, error) {
 	Reads the directory provided as the root of a new bag and attemps to parse the file
 	contents into payload, manifests and tagfiles.
 */
-func ReadBag(pathToFile string, tagfiles []string, manifest string) (*Bag, error) {
+func ReadBag(pathToFile string, tagfiles []string) (*Bag, error) {
 	// validate existance
 	fi, err := os.Stat(pathToFile)
 	if err != nil {
@@ -131,39 +161,36 @@ func ReadBag(pathToFile string, tagfiles []string, manifest string) (*Bag, error
 	bag.payload = payload
 	bag.tagfiles = make(map[string]*TagFile)
 
-	if bag.Manifests == nil {
-		bag.Manifests = make([]*Manifest, 0)
+	errors := bag.findManifests()
+	if errors != nil {
+		errorMessage := ""
+		for _, e := range errors {
+			errorMessage = fmt.Sprintf("%s; %s", errorMessage, e.Error())
+		}
+		return nil, fmt.Errorf(errorMessage)
+	}
+	if len(bag.Manifests) == 0 {
+		return nil, fmt.Errorf("Unable to parse a manifest")
 	}
 
-	if len(bag.Manifests) == 0 {
-		errors := bag.findManifests()
-		if errors != nil {
-			errorMessage := ""
-			for _, e := range errors {
-				errorMessage = fmt.Sprintf("%s; %s", errorMessage, e.Error())
-			}
-			return nil, fmt.Errorf(errorMessage)
+	for i := range bag.Manifests {
+		manifest := bag.Manifests[i]
+		manifestPath := manifest.Name()
+		if filepath.Dir(manifestPath) != bag.pathToFile {
+			manifestPath = filepath.Join(bag.pathToFile, manifest.Name())
 		}
-		if len(bag.Manifests) == 0 {
-			return nil, fmt.Errorf("Unable to parse a manifest")
+		if _, err := os.Stat(manifestPath); err != nil {
+			return nil, fmt.Errorf("Can't find manifest: %v", err)
 		}
-	} else {
-		for i := range bag.Manifests {
-			manifest := bag.Manifests[i]
-			manifestPath := filepath.Join(bag.pathToFile, manifest.Name())
-			if _, err := os.Stat(manifestPath); err != nil {
-				return nil, fmt.Errorf("Manifest '%s' does not exist", manifest.Name())
+		parsedManifest, errs := ReadManifest(manifestPath)
+		if errs != nil && len(errs) > 0 {
+			errors := ""
+			for _, e := range(errs) {
+				errors = fmt.Sprintf("%s; %s", errors, e.Error())
 			}
-			parsedManifest, errs := ReadManifest(manifestPath)
-			if errs != nil && len(errs) > 0 {
-				errors := ""
-				for _, e := range(errs) {
-					errors = fmt.Sprintf("%s; %s", errors, e.Error())
-				}
-				return nil, fmt.Errorf("Unable to parse manifest %s: %s", manifestPath, errors)
-			} else {
-				bag.Manifests[i] = parsedManifest
-			}
+			return nil, fmt.Errorf("Unable to parse manifest %s: %s", manifestPath, errors)
+		} else {
+			bag.Manifests[i] = parsedManifest
 		}
 	}
 
@@ -192,21 +219,26 @@ func ReadBag(pathToFile string, tagfiles []string, manifest string) (*Bag, error
 		}
 	}
 
-	// TODO change this return
 	return bag, nil
 }
 
+// Finds all payload and tag manifests in an existing bag.
+// This is used by ReadBag, not when creating a bag.
 func (b *Bag) findManifests() ([]error){
-	bagFiles, _ := b.ListFiles()
-	for _, fName := range bagFiles {
-		filePath := filepath.Join(b.pathToFile, fName)
-		if len(b.Manifests) == 0 &&
-			(strings.HasPrefix(fName, "manifest-") || strings.HasPrefix(fName, "tagmanifest-")) {
-			manifest, errors := ReadManifest(filePath)
-			if errors != nil && len(errors) > 0 {
-				return errors
+	if b.Manifests == nil {
+		b.Manifests = make([]*Manifest, 0)
+	}
+	if len(b.Manifests) == 0 {
+		bagFiles, _ := b.ListFiles()
+		for _, fName := range bagFiles {
+			filePath := filepath.Join(b.pathToFile, fName)
+			if strings.HasPrefix(fName, "manifest-") || strings.HasPrefix(fName, "tagmanifest-") {
+				manifest, errors := ReadManifest(filePath)
+				if errors != nil && len(errors) > 0 {
+					return errors
+				}
+				b.Manifests = append(b.Manifests, manifest)
 			}
-			b.Manifests = append(b.Manifests, manifest)
 		}
 	}
 	return nil
@@ -221,11 +253,11 @@ func (b *Bag) findManifests() ([]error){
 			err := b.AddFile("/tmp/myfile.txt", "myfile.txt")
 */
 func (b *Bag) AddFile(src string, dst string) error {
-	digest, err := b.payload.Add(src, dst, b.Manifests[0])
+	payloadManifests := b.GetManifests(PayloadManifest)
+	_, err := b.payload.Add(src, dst, payloadManifests)
 	if err != nil {
 		return err
 	}
-	b.Manifests[0].Data[filepath.Join("data", dst)] = digest
 	return err
 }
 
@@ -234,11 +266,8 @@ func (b *Bag) AddFile(src string, dst string) error {
 // example:
 //			errs := b.AddDir("/tmp/mypreservationfiles")
 func (b *Bag) AddDir(src string) (errs []error) {
-	data, errs := b.payload.AddAll(src, b.Manifests[0])
-
-	for key := range data {
-		b.Manifests[0].Data[filepath.Join("data", key)] = data[key]
-	}
+	payloadManifests := b.GetManifests(PayloadManifest)
+	_, errs = b.payload.AddAll(src, payloadManifests)
 	return errs
 }
 
@@ -252,15 +281,11 @@ func (b *Bag) AddDir(src string) (errs []error) {
 			err := b.AddTagfile("baginfo.txt")
 */
 func (b *Bag) AddTagfile(name string) error {
-	if name == "tagmanifest-md5.txt" || name == "tagmanifest-sha256.txt" {
-		return fmt.Errorf("Don't call AddTagFile() for tagmanifest-md5.txt or " +
-		"tagmanifest-sha256.txt. Those tag manifests are added automatically.")
-	}
-	tagPath := filepath.Join(b.Path(), name)
-	if err := os.MkdirAll(filepath.Dir(tagPath), 0766); err != nil {
+	tagFilePath := filepath.Join(b.Path(), name)
+	if err := os.MkdirAll(filepath.Dir(tagFilePath), 0766); err != nil {
 		return err
 	}
-	tf, err := NewTagFile(tagPath)
+	tf, err := NewTagFile(tagFilePath)
 	if err != nil {
 		return err
 	}
@@ -268,31 +293,6 @@ func (b *Bag) AddTagfile(name string) error {
 	if err := tf.Create(); err != nil {
 		return err
 	}
-
-	// Add tag file checksums to tag manifests
-	err = b.addChecksumToTagManifest(tagPath, "md5")
-	if err != nil {
-		return err
-	}
-	err = b.addChecksumToTagManifest(tagPath, "sha256")
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (b *Bag) addChecksumToTagManifest(filePath, algorithm string) (error) {
-	tagManifest, err := b.GetOrCreateTagManifest(algorithm)
-	if err != nil {
-		return fmt.Errorf("Error getting tagmanifest-%s.txt: %v", algorithm, err)
-	}
-	checkSum, err := bagutil.CalculateChecksum(filePath, algorithm)
-	if err != nil {
-		return fmt.Errorf("Error calculating %s checksum for file %s: %v",
-			algorithm, filePath, err)
-	}
-	tagManifest.Data[filePath] = checkSum
 	return nil
 }
 
@@ -334,35 +334,32 @@ func (b *Bag) BagInfo() (*TagFile, error) {
 	return tf, nil
 }
 
-// Returns the existing tag manifest with the specified algorithm,
-// or nil. For example, GetTagManifest("sha256") returns either the
-// existing instance of tagmanifest-sha256.txt or nil. See also
-// GetOrCreateTagManifest().
-func (b *Bag) GetTagManifest(algorithm string) (*Manifest) {
+
+// Returns the manifest with the specified algorithm and type,
+// or nil. For example, GetManifest(PayloadManifest, "sha256")
+// returns either a reference to manifest-sha256.txt or nil.
+// GetManifest(TagManifest, "md5") returns a reference to
+// tagmanifest-md5.txt or nil.
+func (b *Bag) GetManifest(manifestType, algorithm string) (*Manifest) {
 	for _, m := range b.Manifests {
-		if m.Type() == "tagmanifest" && m.Algorithm() == algorithm {
+		if m.Type() == manifestType && m.Algorithm() == algorithm {
 			return m
 		}
 	}
 	return nil
 }
 
-// Returns the existing tag manifest with the specified algorithm,
-// or creates it if the manifest doesn't already exist. For example,
-// GetOrCreateTagManifest("sha256") returns either the
-// existing instance of tagmanifest-sha256.txt or creates a new
-// one and returns that. See also GetTagManifest().
-func (b *Bag) GetOrCreateTagManifest(algorithm string) (*Manifest, error) {
-	var err error = nil
-	manifest := b.GetTagManifest(algorithm)
-	if manifest == nil {
-		name := fmt.Sprintf("tagmanifest-%s.txt", strings.ToLower(algorithm))
-		manifest, err = NewManifest(name, algorithm)
-		if err != nil {
-			return nil, err
+// Returns the manifests of the specified type,
+// or an empty slice. For example, GetManifests(PayloadManifest)
+// returns all of the payload manifests.
+func (b *Bag) GetManifests(manifestType string) ([]*Manifest) {
+	manifests := make([]*Manifest, 0)
+	for _, m := range b.Manifests {
+		if m.Type() == manifestType {
+			manifests = append(manifests, m)
 		}
 	}
-	return manifest, nil
+	return manifests
 }
 
 // TODO create methods for managing fetch file.
@@ -379,20 +376,36 @@ func (b *Bag) Path() string {
  bag.
 */
 func (b *Bag) Save() (errs []error) {
-	// Write all the manifest files.
-	for i := range b.Manifests {
-		manifest := b.Manifests[i]
-		if err := manifest.Create(); err != nil {
-			errs = append(errs, err)
-		}
-	}
-
 	// Write all the tag files.
 	for _, tf := range b.tagfiles {
 		if err := os.MkdirAll(filepath.Dir(tf.Name()), 0766); err != nil {
 			errs = append(errs, err)
 		}
 		if err := tf.Create(); err != nil {
+			errs = append(errs, err)
+		}
+
+		// Add tag file checksums to tag manifests
+		tagManifests := b.GetManifests(TagManifest)
+		for i := range tagManifests {
+			manifest := tagManifests[i]
+			checksum, err := bagutil.FileChecksum(tf.Name(), manifest.hashFunc())
+			if err != nil {
+				errors := []error {
+					fmt.Errorf("Error calculating %s checksum for file %s: %v",
+						manifest.Algorithm(), tf.Name(), err),
+				}
+				return errors
+			}
+			manifest.Data[tf.Name()] = checksum
+		}
+	}
+
+	// Write all the manifest files.
+	payloadManifests := b.GetManifests(PayloadManifest)
+	for i := range payloadManifests {
+		manifest := b.Manifests[i]
+		if err := manifest.Create(); err != nil {
 			errs = append(errs, err)
 		}
 	}

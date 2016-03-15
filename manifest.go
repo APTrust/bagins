@@ -36,6 +36,11 @@ type Manifest struct {
 	hashFunc      func() hash.Hash
 }
 
+const (
+	PayloadManifest = "payload_manifest"
+	TagManifest     = "tag_manifest"
+)
+
 // Returns a pointer to a new manifest or returns an error if improperly named.
 func NewManifest(pathToFile string, hashName string) (*Manifest, error) {
 	if _, err := os.Stat(filepath.Dir(pathToFile)); err != nil {
@@ -47,7 +52,7 @@ func NewManifest(pathToFile string, hashName string) (*Manifest, error) {
 	}
 	m := new(Manifest)
 	m.hashName = hashName
-	m.manifestType = "manifest"
+	m.manifestType = PayloadManifest
 	hashFunc, err := bagutil.LookupHash(hashName)
 	if err != nil {
 		return nil, err
@@ -55,14 +60,14 @@ func NewManifest(pathToFile string, hashName string) (*Manifest, error) {
 	m.hashFunc = hashFunc
 	m.Data = make(map[string]string)
 
-	// TODO: Fix this!
 	// First option is required if user passed a manifest file name into Bag.ReadBag().
 	// Second option is required if no manifest file name was passed in to Bag.ReadBag().
-	if filepath.Dir(pathToFile) != "" && strings.Contains(pathToFile, "manifest-") {
+	if strings.HasSuffix(pathToFile, "tagmanifest-" + hashName + ".txt") {
 		m.name = pathToFile
-	} else if strings.Contains(pathToFile, "tagmanifest-") {
-		m.manifestType = "tagmanifest"
-	} else {
+		m.manifestType = TagManifest
+	} else if filepath.Dir(pathToFile) != "" && strings.HasSuffix(pathToFile, "manifest-" + hashName + ".txt") {
+		m.name = pathToFile
+	} else  {
 		m.name = filepath.Join(pathToFile, "manifest-"+strings.ToLower(hashName)+".txt")
 	}
 

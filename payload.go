@@ -10,6 +10,7 @@ package bagins
 
 import (
 	"fmt"
+	"hash"
 	"io"
 	"os"
 	"path/filepath"
@@ -38,14 +39,27 @@ func (p *Payload) Name() string {
 }
 
 // Adds the file at srcPath to the payload directory as dstPath and returns
-// a checksum value as calulated by the provided hash.  Returns the checksum
-// string and any error encountered
-func (p *Payload) Add(srcPath string, dstPath string, m *Manifest) (string, error) {
+// a checksum value as calulated by the provided hash. This function also
+// writes the checksums into the proper manifests, so you don't have to.
+//
+// Param manifests should be a slice of payload manifests, which you can get
+// from a bag by calling:
+//
+// bag.GetManifests(PayloadManifest)
+//
+// Returns the checksums in the form of a map whose keys are the algorithms
+// and values are the digests.
+//
+// If you have an md5 manifest and a sha256 manifest, you'll get back a map
+// that looks like this:
+//
+// checksums["md5"] = "0a0a0a0a"
+// checksums["sha256"] = "0b0b0b0b"
+func (p *Payload) Add(srcPath string, dstPath string, manifests []*Manifest) (map[string]string, error) {
 
-	hsh := m.hashFunc()
 	src, err := os.Open(srcPath)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	defer src.Close()
 
@@ -55,45 +69,91 @@ func (p *Payload) Add(srcPath string, dstPath string, m *Manifest) (string, erro
 
 	absSrcPath, err := filepath.Abs(srcPath)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	absDestPath, err := filepath.Abs(dstFile)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
+
+	hashWriters := make([]io.Writer, 0)
+	hashFunctions := make([]hash.Hash, 0)
+	hashFunctionNames := make([]string, 0)
+
+	// Note that we're putting the same object into
+	// hashWriters and hashFunctions, because we need
+	// them to behave as both io.Writer and hash.Hash.
+	for _, m := range manifests {
+		hashObj := m.hashFunc()
+		hashWriters = append(hashWriters, hashObj)
+		hashFunctions = append(hashFunctions, hashObj)
+		hashFunctionNames = append(hashFunctionNames, m.Algorithm())
+	}
+
 
 	// If src and dst are the same, copying with destroy the src.
 	// Just compute the hash.
 	if absSrcPath == absDestPath {
-		wrtr = io.MultiWriter(hsh)
+		wrtr = io.MultiWriter(hashWriters...)
 	} else {
 		// TODO simplify this! returns on windows paths are messing with me so I'm
 		// going through this step wise.
 		if err := os.MkdirAll(filepath.Dir(dstFile), 0766); err != nil {
-			return "", err
+			return nil, err
 		}
 		dst, err := os.Create(dstFile)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
-		wrtr = io.MultiWriter(dst, hsh)
+		// Append the destination file to our group of hashWriters,
+		// so the file actually gets copied.
+		hashWriters = append(hashWriters, dst)
+		wrtr = io.MultiWriter(hashWriters...)
 		defer dst.Close()
 	}
 
+	// Copy the file and compute the hashes. Note that if src and dest
+	// are the same, we're only only computing the hash without actually
+	// copying the bits.
 	_, err = io.Copy(wrtr, src)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	chkSum := fmt.Sprintf("%x", hsh.Sum(nil))
-	return chkSum, err
+
+	// Calculate the checksums in hex format, so we can return them
+	// and write them into the manifests.
+	checksums := make(map[string]string)
+	for index := range hashFunctions {
+		manifest := manifests[index]
+		name := hashFunctionNames[index]
+		hashFunc := hashFunctions[index]
+		digest := fmt.Sprintf("%x", hashFunc.Sum(nil))
+		checksums[name] = digest
+
+		// Add the path and digest to the manifest
+		manifest.Data[filepath.Join("data", dstPath)] = digest
+	}
+	return checksums, err
 }
 
 // Performs an add on every file under the directory supplied to the
-// method.  Returns a map of the filenames and its fixity value based
-// on the hash function passed and a slice of errors if there were any.
-func (p *Payload) AddAll(src string, m *Manifest) (fxs map[string]string, errs []error) {
+// method. Returns a map of filenames and fixity values based
+// on the hash function in the manifests.
+//
+// Param manifests should be a slice of payload manifests, which you can get
+// from a bag by calling:
+//
+// bag.GetManifests(PayloadManifest)
+//
+// If you have an md5 manifest and a sha256 manifest, you'll get back a map
+// that looks like this:
+//
+// checksums["file1.txt"] = { "md5": "0a0a0a0a", "sha256": "0b0b0b0b" }
+// checksums["file2.xml"] = { "md5": "1a1a1a1a", "sha256": "1b1b1b1b" }
+// checksums["file3.jpg"] = { "md5": "2a2a2a2a", "sha256": "2b2b2b2b" }
+func (p *Payload) AddAll(src string, manifests []*Manifest) (checksums map[string]map[string]string, errs []error) {
 
-	fxs = make(map[string]string)
+	checksums = make(map[string]map[string]string)
 
 	// Collect files to add in scr directory.
 	var files []string
@@ -110,19 +170,19 @@ func (p *Payload) AddAll(src string, m *Manifest) (fxs map[string]string, errs [
 	// Perform Payload.Add on each file found in src under a goroutine.
 	queue := make(chan bool, 5)
 	wg := sync.WaitGroup{}
-	for idx := range files {
+	for index := range files {
 		queue <- true
 		wg.Add(1)
-		go func(file string, src string, m *Manifest) {
+		go func(file string, src string, manifests []*Manifest) {
 			dstPath := strings.TrimPrefix(file, src)
-			fx, err := p.Add(file, dstPath, m)
+			fixities, err := p.Add(file, dstPath, manifests)
 			if err != nil {
 				errs = append(errs, err)
 			}
-			fxs[dstPath] = fx
+			checksums[dstPath] = fixities
 			<-queue
 			wg.Done()
-		}(files[idx], src, m)
+		}(files[index], src, manifests)
 	}
 
 	wg.Wait()
