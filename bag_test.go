@@ -247,9 +247,37 @@ func TestReadCustomBag(t *testing.T) {
 		if payloadManifests[0].Algorithm() != "md5" {
 			t.Errorf("Expected first manifest to be md5, got %s", payloadManifests[0].Algorithm())
 		}
+		// Payload md5 manifest should have one entry
+		if len(payloadManifests[0].Data) != 1 {
+			t.Errorf("Payload manifest should have one entry, found %s", len(payloadManifests[0].Data))
+		}
+		for key, value := range payloadManifests[0].Data {
+			dataFilePath := filepath.Join("data", fi.Name())
+			if key != dataFilePath {
+				t.Errorf("Missing expected manifest entry for %s. Got %s", dataFilePath, key)
+			}
+			if value != "e4d909c290d0fb1ca068ffaddf22cbd0" {
+				t.Errorf("Incorrect md5 checksum. Got %s", value)
+			}
+		}
+
 		if payloadManifests[1].Algorithm() != "sha256" {
 			t.Errorf("Expected first manifest to be sha256, got %s", payloadManifests[0].Algorithm())
 		}
+		// Payload sha256 manifest should have one entry
+		if len(payloadManifests[1].Data) != 1 {
+			t.Errorf("Payload manifest should have one entry, found %s", len(payloadManifests[1].Data))
+		}
+		for key, value := range payloadManifests[1].Data {
+			dataFilePath := filepath.Join("data", fi.Name())
+			if key != dataFilePath {
+				t.Errorf("Missing expected manifest entry for %s. Got %s", dataFilePath, key)
+			}
+			if value != "ef537f25c895bfa782526529a9b63d97aa631564d5d789c2b765448c8635fb6c" {
+				t.Errorf("Incorrect md5 checksum. Got %s", value)
+			}
+		}
+
 	}
 }
 
