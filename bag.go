@@ -20,6 +20,7 @@ package bagins
 import (
 	"github.com/APTrust/bagins/bagutil"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -28,10 +29,11 @@ import (
 
 // Represents the basic structure of a bag which is controlled by methods.
 type Bag struct {
-	pathToFile      string // path to the bag
-	payload         *Payload
-	Manifests       []*Manifest
-	tagfiles        map[string]*TagFile // Key is relative path
+	pathToFile              string // path to the bag
+	payload                 *Payload
+	Manifests               []*Manifest
+	tagfiles                map[string]*TagFile // Key is relative path
+	excludeFromTagManifests map[string]bool
 }
 
 // METHODS FOR CREATING AND INITALIZING BAGS
@@ -140,7 +142,7 @@ func (b *Bag) createBagItFile() (*TagFile, error) {
 	contents into payload, manifests and tagfiles.
 */
 func ReadBag(pathToFile string, tagfiles []string) (*Bag, error) {
-	// validate existance
+	// validate existence
 	fi, err := os.Stat(pathToFile)
 	if err != nil {
 		return nil, err
@@ -266,8 +268,8 @@ func (b *Bag) AddFile(src string, dst string) error {
 	return err
 }
 
-// Performans a Bag.AddFile on all files found under the src location including all
-// subdirectories.
+// Performans a Bag.AddFile on all files found under the src
+// location including all subdirectories.
 // example:
 //			errs := b.AddDir("/tmp/mypreservationfiles")
 func (b *Bag) AddDir(src string) (errs []error) {
@@ -284,6 +286,18 @@ func (b *Bag) AddDir(src string) (errs []error) {
  as part of name parameter.
  example:
 			err := b.AddTagfile("baginfo.txt")
+
+ Note that this is for adding tag files that adhere to
+ the "Text Tag File Format" described in section 2.2.4
+ of the BagIt spec at http://tools.ietf.org/html/draft-kunze-bagit-13.
+
+ For this type of tag file, you add name-value pairs to
+ the tag file's Data attribute, and this library ensures
+ that the data is written to the file according to the
+ specification.
+
+ The spec also allows you to add non-standard tag files
+ in ANY format. For that, see AddCustomTagfile.
 */
 func (b *Bag) AddTagfile(name string) error {
 	tagFilePath := filepath.Join(b.Path(), name)
@@ -298,6 +312,75 @@ func (b *Bag) AddTagfile(name string) error {
 	if err := tf.Create(); err != nil {
 		return err
 	}
+	return nil
+}
+
+/*
+ AddCustomTagfile adds a tag file of ANY format into the
+ bag at the specified path without making any attempt to
+ validate or even read the contents of the custom tag file.
+
+ The sourcePath param describes where the file should be
+ copied from. The destPath param describes what the file's
+ relative path in the bag should be, while includeInTagManifests
+ describes whether the custom tag file should be included in
+ the bag's tag manifests.
+
+ The destPath parameter cannot start with "data/" because
+ that would put it in the payload directory, and it cannot
+ start with a slash or contain "..".
+
+ Example:
+
+ bag.AddCustomTagfile("/home/june/cleaver.xml", "customtags/cleaver-meta.xml", true)
+
+ That says put "/home/june/cleaver.xml" into the bag at
+ "customtags/cleaver-meta.xml" and record it in the tagmanifests
+ with the appropriate checksums.
+*/
+func (b *Bag) AddCustomTagfile(sourcePath string, destPath string, includeInTagManifests bool) error {
+	if (strings.HasPrefix(destPath, "/data") ||
+		strings.HasPrefix(destPath, "/") || strings.Contains(destPath, "..")) {
+		return fmt.Errorf("Illegal value '%s' for param destPath. " +
+			"File name cannot start with '/' or '/data' or contain '..'", destPath)
+	}
+
+	absSourcePath, err := filepath.Abs(sourcePath)
+	if err != nil {
+		return err
+	}
+	absDestPath, err := filepath.Abs(destPath)
+	if err != nil {
+		return err
+	}
+
+	if absSourcePath != absDestPath {
+		sourceFile, err := os.Open(absSourcePath)
+		if err != nil {
+			return err
+		}
+		defer sourceFile.Close()
+
+		destFile, err := os.Create(absDestPath)
+		if err != nil {
+			return err
+		}
+		defer destFile.Close()
+
+		_, err = io.Copy(destFile, sourceFile)
+		if err != nil {
+			return err
+		}
+		destFile.Sync()
+	}
+
+	// The Save() function puts all non-payload, non-manifest files
+	// into the tag manifests by default. So we only need to keep
+	// a map of what to exclude.
+	if includeInTagManifests == false {
+		b.excludeFromTagManifests[destPath] = true
+	}
+
 	return nil
 }
 
@@ -422,7 +505,44 @@ func (b *Bag) Path() string {
  bag.
 */
 func (b *Bag) Save() (errs []error) {
-	// Write all the tag files.
+
+	errors := b.savePayloadManifests()
+	if len(errors) > 0 {
+		errs = append(errs, errors...)
+	}
+
+	errors = b.calculateChecksumsForManagedTagFiles()
+	if len(errors) > 0 {
+		errs = append(errs, errors...)
+	}
+
+	errors = b.calculateChecksumsForCustomTagFiles()
+	if len(errors) > 0 {
+		errs = append(errs, errors...)
+	}
+
+	errors = b.saveTagManifests()
+	if len(errors) > 0 {
+		errs = append(errs, errors...)
+	}
+
+	return errs
+}
+
+func (b *Bag) savePayloadManifests() (errs []error) {
+	// Write the payload manifests first because we may
+	// need to include their checksums in the tagmanifests.
+	payloadManifests := b.GetManifests(PayloadManifest)
+	for i := range payloadManifests {
+		manifest := payloadManifests[i]
+		if err := manifest.Create(); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return errs
+}
+
+func (b *Bag) calculateChecksumsForManagedTagFiles() (errs []error) {
 	tagManifests := b.GetManifests(TagManifest)
 	for _, tf := range b.tagfiles {
 		if err := os.MkdirAll(filepath.Dir(tf.Name()), 0766); err != nil {
@@ -431,7 +551,6 @@ func (b *Bag) Save() (errs []error) {
 		if err := tf.Create(); err != nil {
 			errs = append(errs, err)
 		}
-
 		// Add tag file checksums to tag manifests
 		for i := range tagManifests {
 			manifest := tagManifests[i]
@@ -446,15 +565,49 @@ func (b *Bag) Save() (errs []error) {
 			manifest.Data[tf.Name()] = checksum
 		}
 	}
+	return errs
+}
 
-	// Write all the manifest files.
-	for i := range b.Manifests {
-		manifest := b.Manifests[i]
+func (b *Bag) calculateChecksumsForCustomTagFiles() (errs []error) {
+	// Calculate checksums that go into the tag manifests.
+	nonPayloadFiles, err := b.UnparsedTagFiles()
+	if err != nil {
+		errs = append(errs, err)
+	}
+	payloadManifests := b.GetManifests(PayloadManifest)
+	tagManifests := b.GetManifests(TagManifest)
+	for _, m := range payloadManifests {
+		nonPayloadFiles = append(nonPayloadFiles, m.Name())
+	}
+	for _, file := range nonPayloadFiles {
+		if _, exclude := b.excludeFromTagManifests[file]; exclude {
+			continue
+		}
+		for i := range tagManifests {
+			manifest := tagManifests[i]
+			checksum, err := bagutil.FileChecksum(file, manifest.hashFunc())
+			if err != nil {
+				errors := []error {
+					fmt.Errorf("Error calculating %s checksum for file %s: %v",
+						manifest.Algorithm(), file, err),
+				}
+				return errors
+			}
+			manifest.Data[file] = checksum
+		}
+	}
+	return errs
+}
+
+func (b *Bag) saveTagManifests() (errs []error) {
+	tagManifests := b.GetManifests(TagManifest)
+	for i := range tagManifests {
+		manifest := tagManifests[i]
 		if err := manifest.Create(); err != nil {
 			errs = append(errs, err)
 		}
 	}
-	return
+	return errs
 }
 
 /*

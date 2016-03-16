@@ -82,7 +82,10 @@ func setupTagfileBag(bagName string) (*bagins.Bag, error) {
 		*bagins.NewTagField("4:00PM", "Dexter"),
 	})
 
-	bag.Save()
+	errors := bag.Save()
+	if errors != nil && len(errors) > 0 {
+		return nil, errors[0]
+	}
 	return bag, nil
 }
 
@@ -207,6 +210,7 @@ func TestReadCustomBag(t *testing.T) {
 	// Setup Custom Bag
 	bagName := "__GO_TEST_READ_CUSTOM_BAG__"
 	bagPath := filepath.Join(os.TempDir(), bagName)
+	defer os.RemoveAll(bagPath)
 	bag, err := setupCustomBag(bagName)
 	if err != nil {
 		t.Errorf("Unexpected error setting up custom bag: %s", err)
@@ -288,13 +292,14 @@ func TestReadTagFileBag(t *testing.T) {
 	// Setup bag with custom tag files
 	bagName := "__GO_TEST_READ_TAGFILE_BAG__"
 	bagPath := filepath.Join(os.TempDir(), bagName)
+	defer os.RemoveAll(bagPath)
+
 	bag, err := setupTagfileBag(bagName)
 	if err != nil {
 		t.Errorf("Unexpected error setting up tagfile bag: %s", err)
 	}
 	bag.AddFile(fi.Name(), testFileName)
 	bag.Save()
-	defer os.RemoveAll(bagPath)
 
 	rBag, err := bagins.ReadBag(bag.Path(), []string{"bagit.txt", "bag-info.txt", "aptrust-info.txt"})
 	if err != nil {
@@ -364,6 +369,8 @@ func TestReadTagFileBag(t *testing.T) {
 	laserTagFile := filepath.Join(bagPath, "laser-tag.txt")
 	playerStatsFile := filepath.Join(bagPath, "custom-tags", "player-stats.txt")
 	tvScheduleFile := filepath.Join(bagPath, "custom-tags", "tv-schedule.txt")
+	manifestMd5 := filepath.Join(bagPath, "manifest-md5.txt")
+	manifestSha256 := filepath.Join(bagPath, "manifest-sha256.txt")
 
 	tagFiles := []string { aptrustInfoFile, bagInfoFile, bagItFile,
 		laserTagFile, playerStatsFile, tvScheduleFile }
@@ -443,8 +450,8 @@ func TestReadTagFileBag(t *testing.T) {
 			t.Errorf("Expected first manifest to be md5, got %s", tagManifests[0].Algorithm())
 		}
 		// Tag md5 manifest should have six entries
-		if len(tagManifests[0].Data) != 6 {
-			t.Errorf("Tag manifest should have 6 entries, found %s", len(tagManifests[0].Data))
+		if len(tagManifests[0].Data) != 8 {
+			t.Errorf("Tag manifest should have 8 entries, found %d", len(tagManifests[0].Data))
 		}
 
 		// Check the fixity values
@@ -455,6 +462,8 @@ func TestReadTagFileBag(t *testing.T) {
 		md5Entries[laserTagFile] = "29251712228b36927c43157fe5808552"
 		md5Entries[playerStatsFile] = "dfa872f6da2af8087bea5f7ab1dbc1fa"
 		md5Entries[tvScheduleFile] = "118df3be000eae34d6e6dbf7f56c649b"
+		md5Entries[manifestMd5] = "4c5a8c217cf51fb419e425ddc2f433ee"
+		md5Entries[manifestSha256] = "edbc9b8dabe4c894d22cc42d5268867b"
 
 		for key, expectedValue := range md5Entries {
 			actualValue := tagManifests[0].Data[key]
@@ -467,9 +476,9 @@ func TestReadTagFileBag(t *testing.T) {
 		if tagManifests[1].Algorithm() != "sha256" {
 			t.Errorf("Expected first manifest to be sha256, got %s", tagManifests[1].Algorithm())
 		}
-		// Tag sha256 manifest should have six entries
-		if len(tagManifests[1].Data) != 6 {
-			t.Errorf("Tag manifest should have six entries, found %s", len(tagManifests[1].Data))
+		// Tag sha256 manifest should have 8 entries (2 are for payload manifests)
+		if len(tagManifests[1].Data) != 8 {
+			t.Errorf("Tag manifest should have 8 entries, found %d", len(tagManifests[1].Data))
 		}
 
 		// Check fixity values
@@ -487,6 +496,10 @@ func TestReadTagFileBag(t *testing.T) {
 			"83137fc6d88212250153bd713954da1d1c5a69c57a55ff97cac07ca6db7ec34d"
 		sha256Entries[tvScheduleFile] =
 			"fbf223502fe7f470363346283620401d04e77fe43a9a74faa682eebe28417e7c"
+		sha256Entries[manifestMd5] =
+			"9aab27bb0d2d75d7ac2c26908e2ca85e7121f106445318f7def024f4b520bec2"
+		sha256Entries[manifestSha256] =
+			"2a9e5d86070459a652fdc2ce13f5358ede42b10a3e0580e149b0d3df938ffe30"
 
 		for key, expectedValue := range sha256Entries {
 			actualValue := tagManifests[1].Data[key]
@@ -548,11 +561,11 @@ func TestListTagFiles(t *testing.T) {
 	// Setup Custom Bag
 	bagName := "__GO_TEST_LIST_TAG_FILES__"
 	bagPath := filepath.Join(os.TempDir(), bagName)
+	defer os.RemoveAll(bagPath)
 	bag, err := setupCustomBag(bagName)
 	if err != nil {
 		t.Errorf("Unexpected error setting up custom bag: %s", err)
 	}
-	defer os.RemoveAll(bagPath)
 
 	expected := []string{"bagit.txt", "bag-info.txt", "aptrust-info.txt"}
 	if len(bag.ListTagFiles()) != len(expected) {
