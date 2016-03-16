@@ -296,7 +296,7 @@ func TestReadTagFileBag(t *testing.T) {
 	bag.Save()
 	defer os.RemoveAll(bagPath)
 
-	rBag, err := bagins.ReadBag(bag.Path(), []string{"bag-info.txt", "aptrust-info.txt"})
+	rBag, err := bagins.ReadBag(bag.Path(), []string{"bagit.txt", "bag-info.txt", "aptrust-info.txt"})
 	if err != nil {
 		t.Errorf("Unexpected error reading custom bag: %s", err)
 	}
@@ -375,7 +375,64 @@ func TestReadTagFileBag(t *testing.T) {
 	}
 
 	// Make sure the bag knows they're there too
+	files, err := rBag.ListFiles()
+	if err != nil {
+		t.Errorf("ListFiles() returned error %v", err)
+	}
+	expectedFiles := []string {
+		"aptrust-info.txt",
+		"bag-info.txt",
+		"bagit.txt",
+		"custom-tags/player-stats.txt",
+		"custom-tags/tv-schedule.txt",
+		"data/TEST_READ_TAGFILE_BAG_FILE.txt",
+		"laser-tag.txt",
+		"manifest-md5.txt",
+		"manifest-sha256.txt",
+		"tagmanifest-md5.txt",
+		"tagmanifest-sha256.txt",
+	}
+	for _, expectedFile := range expectedFiles {
+		if !sliceContains(files, expectedFile) {
+			t.Errorf("ListFiles did not return file %s", expectedFile)
+		}
+	}
 
+	// Make sure the bag knows about the parsed tag files
+	expectedParsedFiles := []string {"bagit.txt", "bag-info.txt", "aptrust-info.txt" }
+	parsedTagFiles := rBag.ListTagFiles()
+	if len(parsedTagFiles) != len(expectedParsedFiles) {
+		t.Errorf("Expected %d parsed tag files, got %d",
+			len(parsedTagFiles), len(expectedParsedFiles))
+	}
+
+	for _, expected := range expectedParsedFiles {
+		if !sliceContains(parsedTagFiles, expected) {
+			t.Errorf("ListTagFiles() did not return file %s", expected)
+		}
+	}
+
+	// Make sure the bag knows about unparsed tag files
+	expectedUnparsed := []string {
+		"custom-tags/player-stats.txt",
+		"custom-tags/tv-schedule.txt",
+		"laser-tag.txt"}
+	unparsedTagFiles, err := rBag.UnparsedTagFiles()
+	if err != nil {
+		t.Errorf("UnparsedTagFiles() returned unexpected error: %v", err)
+	}
+
+
+	if len(unparsedTagFiles) != len(expectedUnparsed) {
+		t.Errorf("Expected %d parsed tag files, got %d",
+			len(unparsedTagFiles), len(expectedUnparsed))
+	}
+
+	for _, expected := range expectedUnparsed {
+		if !sliceContains(unparsedTagFiles, expected) {
+			t.Errorf("UnparsedTagFiles() did not return file %s", expected)
+		}
+	}
 
 	// Check tag manifests
 	tagManifests := rBag.GetManifests(bagins.TagManifest)
@@ -488,7 +545,7 @@ func TestAddFile(t *testing.T) {
 }
 
 func TestListTagFiles(t *testing.T) {
-	// Setup Custom BAg
+	// Setup Custom Bag
 	bagName := "__GO_TEST_LIST_TAG_FILES__"
 	bagPath := filepath.Join(os.TempDir(), bagName)
 	bag, err := setupCustomBag(bagName)
@@ -706,4 +763,13 @@ func TestListFiles(t *testing.T) {
 			t.Error("Unexpected file:", fName)
 		}
 	}
+}
+
+func sliceContains(list []string, item string) bool {
+	for _, value := range list {
+		if value == item {
+			return true
+		}
+	}
+	return false
 }

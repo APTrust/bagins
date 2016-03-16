@@ -315,6 +315,9 @@ func (b *Bag) TagFile(name string) (*TagFile, error) {
 
 /*
   Lists all the current tag files the bag is tracking.
+  These are the tag files that the bag has actually parsed.
+  The bag may have any number of unparsed (and perhaps unreadable)
+  tag files as well. For those, see UnparsedTagFiles()
 */
 func (b *Bag) ListTagFiles() []string {
 	names := make([]string, len(b.tagfiles))
@@ -325,6 +328,44 @@ func (b *Bag) ListTagFiles() []string {
 	}
 	return names
 }
+
+// Returns a list of unparsed tag files, which includes any file
+// not a manifest, not in the data directory, and not among the
+// tag files passed into ReadBag().
+func (b *Bag) UnparsedTagFiles() ([]string, error) {
+	var files []string
+
+	// WalkDir function to collect files in the bag..
+	visit := func(pathToFile string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		relativePath, err := filepath.Rel(b.Path(), pathToFile)
+		if err != nil {
+			return err
+		}
+
+		isPayload := strings.HasPrefix(pathToFile, b.payload.Name())
+		isManifest := (strings.HasPrefix(relativePath, "tagmanifest-") ||
+			strings.HasPrefix(relativePath, "manifest-"))
+		_, isParsedTagFile := b.tagfiles[relativePath]
+
+		if !info.IsDir() && !isPayload && !isParsedTagFile && !isManifest {
+			if relativePath != "." {
+				files = append(files, relativePath)
+			}
+		}
+		return err
+	}
+
+	if err := filepath.Walk(b.Path(), visit); err != nil {
+		return nil, err
+	}
+
+	return files, nil
+}
+
 
 /*
  Convienence method to return the bag-info.txt tag file if it exists.  Since
@@ -431,8 +472,7 @@ func (b *Bag) ListFiles() ([]string, error) {
 			return err
 		}
 
-		isPayload := strings.HasPrefix(pathToFile, b.payload.Name())
-		if !info.IsDir() || !isPayload {
+		if !info.IsDir() {
 			fp, err := filepath.Rel(b.Path(), pathToFile)
 			if err != nil {
 				return err
