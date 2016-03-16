@@ -357,6 +357,26 @@ func TestReadTagFileBag(t *testing.T) {
 		}
 	}
 
+	// Check that tag files exist on disk
+	aptrustInfoFile := filepath.Join(bagPath, "aptrust-info.txt")
+	bagInfoFile := filepath.Join(bagPath, "bag-info.txt")
+	bagItFile := filepath.Join(bagPath, "bagit.txt")
+	laserTagFile := filepath.Join(bagPath, "laser-tag.txt")
+	playerStatsFile := filepath.Join(bagPath, "custom-tags", "player-stats.txt")
+	tvScheduleFile := filepath.Join(bagPath, "custom-tags", "tv-schedule.txt")
+
+	tagFiles := []string { aptrustInfoFile, bagInfoFile, bagItFile,
+		laserTagFile, playerStatsFile, tvScheduleFile }
+	for _, tf := range tagFiles {
+		_, err = os.Stat(tf)
+		if  err != nil && os.IsNotExist(err) {
+			t.Errorf("Tag file is not written to disk at %s", tf)
+		}
+	}
+
+	// Make sure the bag knows they're there too
+
+
 	// Check tag manifests
 	tagManifests := rBag.GetManifests(bagins.TagManifest)
 	if len(tagManifests) != 2 {
@@ -372,12 +392,12 @@ func TestReadTagFileBag(t *testing.T) {
 
 		// Check the fixity values
 		md5Entries := make(map[string]string, 6)
-		md5Entries[filepath.Join(bagPath, "aptrust-info.txt")] = "6dd711392d4661322acc469a30565f68"
-		md5Entries[filepath.Join(bagPath, "bag-info.txt")] = "88190858fd93609ae51ca1f06ee575f1"
-		md5Entries[filepath.Join(bagPath, "bagit.txt")] = "ada799b7e0f1b7a1dc86d4e99df4b1f4"
-		md5Entries[filepath.Join(bagPath, "laser-tag.txt")] = "29251712228b36927c43157fe5808552"
-		md5Entries[filepath.Join(bagPath, "custom-tags", "player-stats.txt")] = "dfa872f6da2af8087bea5f7ab1dbc1fa"
-		md5Entries[filepath.Join(bagPath, "custom-tags", "tv-schedule.txt")] = "118df3be000eae34d6e6dbf7f56c649b"
+		md5Entries[aptrustInfoFile] = "6dd711392d4661322acc469a30565f68"
+		md5Entries[bagInfoFile] = "88190858fd93609ae51ca1f06ee575f1"
+		md5Entries[bagItFile] = "ada799b7e0f1b7a1dc86d4e99df4b1f4"
+		md5Entries[laserTagFile] = "29251712228b36927c43157fe5808552"
+		md5Entries[playerStatsFile] = "dfa872f6da2af8087bea5f7ab1dbc1fa"
+		md5Entries[tvScheduleFile] = "118df3be000eae34d6e6dbf7f56c649b"
 
 		for key, expectedValue := range md5Entries {
 			actualValue := tagManifests[0].Data[key]
@@ -398,17 +418,17 @@ func TestReadTagFileBag(t *testing.T) {
 		// Check fixity values
 		// Will these checksums break on Windows, where end-of-line is CRLF?
 		sha256Entries := make(map[string]string, 6)
-		sha256Entries[filepath.Join(bagPath, "aptrust-info.txt")] =
+		sha256Entries[aptrustInfoFile] =
 			"ffe2ab04b87db85886fcfd013c9f09e094b636ca233cd0cbbd1ea300e7a5352c"
-		sha256Entries[filepath.Join(bagPath, "bag-info.txt")] =
+		sha256Entries[bagInfoFile] =
 			"f0ce035c2ee789a7f8821d6f174a75619c575eea0311c47d03149807d252804d"
-		sha256Entries[filepath.Join(bagPath, "bagit.txt")] =
+		sha256Entries[bagItFile] =
 			"49b477e8662d591f49fce44ca5fc7bfe76c5a71f69c85c8d91952a538393e5f4"
-		sha256Entries[filepath.Join(bagPath, "laser-tag.txt")] =
+		sha256Entries[laserTagFile] =
 			"163be000df169eafd84fa0cef6028a4711e53bd3abf9e8c54603035bb92bda95"
-		sha256Entries[filepath.Join(bagPath, "custom-tags", "player-stats.txt")] =
+		sha256Entries[playerStatsFile] =
 			"83137fc6d88212250153bd713954da1d1c5a69c57a55ff97cac07ca6db7ec34d"
-		sha256Entries[filepath.Join(bagPath, "custom-tags", "tv-schedule.txt")] =
+		sha256Entries[tvScheduleFile] =
 			"fbf223502fe7f470363346283620401d04e77fe43a9a74faa682eebe28417e7c"
 
 		for key, expectedValue := range sha256Entries {
