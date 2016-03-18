@@ -73,7 +73,7 @@ func NewBag(location string, name string, hashNames []string, createTagManifests
 	// Init the manifests and tag manifests
 	for _, hashName := range hashNames {
 		lcHashName := strings.ToLower(hashName)
-		manifest, err := NewManifest(bag.Path(), lcHashName)
+		manifest, err := NewManifest(bag.Path(), lcHashName, PayloadManifest)
 		if err != nil {
 			return nil, err
 		}
@@ -82,7 +82,7 @@ func NewBag(location string, name string, hashNames []string, createTagManifests
 		if createTagManifests == true {
 			tagManifestName := fmt.Sprintf("tagmanifest-%s.txt", lcHashName)
 			fullPath := filepath.Join(bag.Path(), tagManifestName)
-			tagmanifest, err := NewManifest(fullPath, lcHashName)
+			tagmanifest, err := NewManifest(fullPath, lcHashName, TagManifest)
 			if err != nil {
 				return nil, err
 			}

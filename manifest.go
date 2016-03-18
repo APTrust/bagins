@@ -15,6 +15,7 @@ import (
 	"github.com/APTrust/bagins/bagutil"
 	"hash"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -42,7 +43,11 @@ const (
 )
 
 // Returns a pointer to a new manifest or returns an error if improperly named.
-func NewManifest(pathToFile string, hashName string) (*Manifest, error) {
+func NewManifest(pathToFile string, hashName string, manifestType string) (*Manifest, error) {
+	if manifestType != PayloadManifest && manifestType != TagManifest {
+		return nil, fmt.Errorf("Param manifestType must be either bagins.PayloadManifest " +
+			"or bagins.TagManifest")
+	}
 	if _, err := os.Stat(filepath.Dir(pathToFile)); err != nil {
 		if os.IsNotExist(err) {
 			return nil, fmt.Errorf("Unable to create manifest. Path does not exist: %s", pathToFile)
@@ -51,8 +56,7 @@ func NewManifest(pathToFile string, hashName string) (*Manifest, error) {
 		}
 	}
 	m := new(Manifest)
-	m.hashName = hashName
-	m.manifestType = PayloadManifest
+	m.hashName = strings.ToLower(hashName)
 	hashFunc, err := bagutil.LookupHash(hashName)
 	if err != nil {
 		return nil, err
@@ -60,15 +64,19 @@ func NewManifest(pathToFile string, hashName string) (*Manifest, error) {
 	m.hashFunc = hashFunc
 	m.Data = make(map[string]string)
 
-	// First option is required if user passed a manifest file name into Bag.ReadBag().
-	// Second option is required if no manifest file name was passed in to Bag.ReadBag().
-	if strings.HasSuffix(pathToFile, "tagmanifest-" + hashName + ".txt") {
-		m.name = pathToFile
+	// Older versions allow pathToFile to be empty...
+	if !strings.HasSuffix(pathToFile, "manifest-" + hashName + ".txt") {
+		if manifestType == PayloadManifest {
+			pathToFile = filepath.Join(pathToFile, "manifest-" + m.hashName +".txt")
+		} else {
+			pathToFile = filepath.Join(pathToFile, "tagmanifest-" + m.hashName + ".txt")
+		}
+	}
+
+	m.name = pathToFile
+	m.manifestType = PayloadManifest
+	if manifestType == TagManifest {
 		m.manifestType = TagManifest
-	} else if filepath.Dir(pathToFile) != "" && strings.HasSuffix(pathToFile, "manifest-" + hashName + ".txt") {
-		m.name = pathToFile
-	} else  {
-		m.name = filepath.Join(pathToFile, "manifest-"+strings.ToLower(hashName)+".txt")
 	}
 
 	return m, nil
@@ -97,7 +105,11 @@ func ReadManifest(name string) (*Manifest, []error) {
 		errs = append(errs, e...)
 	}
 
-	m, err := NewManifest(name, hashName)
+	manifestType := PayloadManifest
+	if strings.HasPrefix(path.Base(name), "tagmanifest-") {
+		manifestType = TagManifest
+	}
+	m, err := NewManifest(name, hashName, manifestType)
 	if err != nil {
 		return nil, append(errs, err)
 	}

@@ -51,7 +51,7 @@ func TestPayloadName(t *testing.T) {
 
 func TestPayloadAdd(t *testing.T) {
 	pDir, _ := ioutil.TempDir("", "_GOTEST_PayloadAdd_")
-	m, _ := bagins.NewManifest(os.TempDir(), "md5")
+	m, _ := bagins.NewManifest(os.TempDir(), "md5", bagins.PayloadManifest)
 	defer os.RemoveAll(pDir)
 
 	p, err := bagins.NewPayload(pDir)
@@ -79,7 +79,7 @@ func TestPayloadAdd(t *testing.T) {
 // get clobbered.
 func TestPayloadAddInPlace(t *testing.T) {
 	pDir, _ := ioutil.TempDir("", "_GOTEST_PayloadAdd_")
-	m, _ := bagins.NewManifest(os.TempDir(), "md5")
+	m, _ := bagins.NewManifest(os.TempDir(), "md5", bagins.PayloadManifest)
 	defer os.RemoveAll(pDir)
 
 	p, err := bagins.NewPayload(pDir)
@@ -114,7 +114,7 @@ func TestPayloadAddAll(t *testing.T) {
 	pDir, _ := ioutil.TempDir("", "_GOTEST_PayloadAddAll_")
 	defer os.RemoveAll(pDir)
 
-	m, _ := bagins.NewManifest(os.TempDir(), "md5")
+	m, _ := bagins.NewManifest(os.TempDir(), "md5", bagins.PayloadManifest)
 
 	// Setup test files
 	for i := 0; i < 100; i++ {
@@ -176,7 +176,7 @@ func BenchmarkPayload(b *testing.B) {
 	pDir, _ := ioutil.TempDir("", "_GOTEST_BenchmarkPayload_Payload_")
 	defer os.RemoveAll(pDir)
 
-	m, _ := bagins.NewManifest(os.TempDir(), "md5")
+	m, _ := bagins.NewManifest(os.TempDir(), "md5", bagins.PayloadManifest)
 
 	// Make src temp test files
 	for i := 0; i < 300; i++ {

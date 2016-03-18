@@ -26,11 +26,53 @@ func TestNewManifest(t *testing.T) {
 	pth, _ := ioutil.TempDir("", "_GOTEST_MANIFEST")
 	defer os.RemoveAll(pth)
 
-	_, err := bagins.NewManifest(pth, "sha1")
+	_, err := bagins.NewManifest(pth, "sha1", bagins.PayloadManifest)
 	if err != nil {
 		t.Error("Manifest could not be created!", err)
 	}
 }
+
+func TestManifestAlgorithm(t *testing.T) {
+	pth, _ := ioutil.TempDir("", "_GOTEST_MANIFEST_ALG")
+	defer os.RemoveAll(pth)
+
+	m, err := bagins.NewManifest(pth, "SHA256", bagins.PayloadManifest)
+	if err != nil {
+		t.Error("Manifest could not be created!", err)
+	}
+
+	if m.Algorithm() != "sha256" {
+		t.Errorf("Algorithm() expected 'sha256', got '%s'", m.Algorithm())
+	}
+}
+
+func TestManifestType(t *testing.T) {
+	pth, _ := ioutil.TempDir("", "_GOTEST_MANIFEST_TYPE")
+	defer os.RemoveAll(pth)
+
+	m, err := bagins.NewManifest(pth, "sha512", bagins.PayloadManifest)
+	if err != nil {
+		t.Error("Manifest could not be created!", err)
+	}
+
+	if m.Type() != bagins.PayloadManifest {
+		t.Errorf("Type() expected '%s', got '%s'", bagins.PayloadManifest, m.Type())
+	}
+
+	pth, _ = ioutil.TempDir("", "_GOTEST_MANIFEST_TYPE/tagmanifest-sha512.txt")
+	defer os.RemoveAll(pth)
+
+	m, err = bagins.NewManifest(pth, "sha512", bagins.TagManifest)
+	if err != nil {
+		t.Error("Manifest could not be created!", err)
+	}
+
+	if m.Type() != bagins.TagManifest {
+		t.Errorf("Type() expected '%s', got '%s'", bagins.TagManifest, m.Type())
+	}
+
+}
+
 
 func TestReadManifest(t *testing.T) {
 
@@ -58,7 +100,7 @@ func TestReadManifest(t *testing.T) {
 	}
 
 	// Setup a good test manifest
-	mf, err := bagins.NewManifest(os.TempDir(), "md5")
+	mf, err := bagins.NewManifest(os.TempDir(), "md5", bagins.PayloadManifest)
 	if err != nil {
 		t.Error(err)
 	}
@@ -90,7 +132,7 @@ func TestRunChecksums(t *testing.T) {
 	testFile.WriteString(test_string)
 	testFile.Close()
 
-	mfst, _ := bagins.NewManifest(os.TempDir(), "sha1")
+	mfst, _ := bagins.NewManifest(os.TempDir(), "sha1", bagins.PayloadManifest)
 	mfst.Data[filepath.Base(testFile.Name())] = test_list["sha1"]
 	errList := mfst.RunChecksums()
 
@@ -109,7 +151,7 @@ func TestRunChecksums(t *testing.T) {
 }
 
 func TestManifestCreate(t *testing.T) {
-	m, _ := bagins.NewManifest(os.TempDir(), "sha1")
+	m, _ := bagins.NewManifest(os.TempDir(), "sha1", bagins.PayloadManifest)
 
 	testFiles := make([]*os.File, 3)
 	for idx := range testFiles {
@@ -132,7 +174,7 @@ func TestManifestCreate(t *testing.T) {
 func TestManifestName(t *testing.T) {
 
 	// Set only Algo should still be blank.
-	m, err := bagins.NewManifest(os.TempDir(), "SHA1")
+	m, err := bagins.NewManifest(os.TempDir(), "SHA1", bagins.PayloadManifest)
 	if err != nil {
 		t.Error(err)
 	}
@@ -143,7 +185,7 @@ func TestManifestName(t *testing.T) {
 }
 
 func TestManifestToString(t *testing.T) {
-	m, _ := bagins.NewManifest(os.TempDir(), "sha1")
+	m, _ := bagins.NewManifest(os.TempDir(), "sha1", bagins.PayloadManifest)
 	m.Data["FileOne.txt"] = fmt.Sprintf("CHECKSUM 0001")
 	m.Data["FileTwo.txt"] = fmt.Sprintf("CHECKSUM 0002")
 	m.Data["FileThree.txt"] = fmt.Sprintf("CHECKSUM 0003")
