@@ -103,6 +103,7 @@ func NewBag(location string, name string, hashNames []string, createTagManifests
 
 	// Init tagfiles map and create the BagIt.txt Tagfile
 	bag.tagfiles = make(map[string]*TagFile)
+	bag.excludeFromTagManifests = make(map[string]bool)
 	tf, err := bag.createBagItFile()
 	if err != nil {
 		return nil, err
@@ -162,6 +163,7 @@ func ReadBag(pathToFile string, tagfiles []string) (*Bag, error) {
 	bag.pathToFile = pathToFile
 	bag.payload = payload
 	bag.tagfiles = make(map[string]*TagFile)
+	bag.excludeFromTagManifests = make(map[string]bool)
 
 	errors := bag.findManifests()
 	if errors != nil {
@@ -349,7 +351,7 @@ func (b *Bag) AddCustomTagfile(sourcePath string, destPath string, includeInTagM
 	if err != nil {
 		return err
 	}
-	absDestPath, err := filepath.Abs(destPath)
+	absDestPath, err := filepath.Abs(filepath.Join(b.pathToFile, destPath))
 	if err != nil {
 		return err
 	}
@@ -361,6 +363,9 @@ func (b *Bag) AddCustomTagfile(sourcePath string, destPath string, includeInTagM
 		}
 		defer sourceFile.Close()
 
+		if err = os.MkdirAll(filepath.Dir(absDestPath), 0766); err != nil {
+			return err
+		}
 		destFile, err := os.Create(absDestPath)
 		if err != nil {
 			return err
@@ -371,13 +376,15 @@ func (b *Bag) AddCustomTagfile(sourcePath string, destPath string, includeInTagM
 		if err != nil {
 			return err
 		}
-		destFile.Sync()
 	}
 
 	// The Save() function puts all non-payload, non-manifest files
 	// into the tag manifests by default. So we only need to keep
 	// a map of what to exclude.
 	if includeInTagManifests == false {
+		if b.excludeFromTagManifests == nil {
+			b.excludeFromTagManifests = make(map[string]bool)
+		}
 		b.excludeFromTagManifests[destPath] = true
 	}
 
@@ -583,9 +590,14 @@ func (b *Bag) calculateChecksumsForCustomTagFiles() (errs []error) {
 		if _, exclude := b.excludeFromTagManifests[file]; exclude {
 			continue
 		}
+		// Use relative path in manifest, abs path when calculating checksum.
+		absPathToFile := file
+		if !strings.HasPrefix(file, b.pathToFile) {
+			absPathToFile = filepath.Join(b.pathToFile, file)
+		}
 		for i := range tagManifests {
 			manifest := tagManifests[i]
-			checksum, err := bagutil.FileChecksum(file, manifest.hashFunc())
+			checksum, err := bagutil.FileChecksum(absPathToFile, manifest.hashFunc())
 			if err != nil {
 				errors := []error {
 					fmt.Errorf("Error calculating %s checksum for file %s: %v",

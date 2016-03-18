@@ -1,6 +1,7 @@
 package bagins_test
 
 import (
+//	"fmt"
 	"github.com/APTrust/bagins"
 	"io/ioutil"
 	"os"
@@ -554,6 +555,58 @@ func TestAddFile(t *testing.T) {
 	}
 	if len(fx) != 32 {
 		t.Errorf("Expected %d character fixity but returned: %d", 32, len(fx))
+	}
+}
+
+func TestAddCustomTagfile(t *testing.T) {
+	// Setup File to test.
+	fi, _ := ioutil.TempFile("", "TEST_READ_CUSTOM_BAG_FILE.txt")
+	fi.WriteString(FIXSTRING)
+	fi.Close()
+	defer os.Remove(fi.Name())
+
+	// Setup Custom Bag
+	bagName := "__GO_TEST_ADD_CUSTOM_TAG_FILE__"
+	bagPath := filepath.Join(os.TempDir(), bagName)
+	defer os.RemoveAll(bagPath)
+	bag, err := setupCustomBag(bagName)
+	if err != nil {
+		t.Errorf("Unexpected error setting up custom bag: %s", err)
+	}
+	bag.AddCustomTagfile(fi.Name(), "custom-tags/in_manifest.txt", true)
+	bag.AddCustomTagfile(fi.Name(), "custom-tags/not_in_manifest.txt", false)
+	bag.Save()
+	defer os.RemoveAll(bagPath)
+
+	rBag, err := bagins.ReadBag(bag.Path(), []string{"bag-info.txt", "aptrust-info.txt"})
+	if err != nil {
+		t.Errorf("Unexpected error reading custom bag: %s", err)
+	}
+
+	files, err := rBag.ListFiles()
+	if err != nil {
+		t.Errorf("Error listing bag files: %v", err)
+	}
+
+	// Make sure the file exists
+	if !sliceContains(files, "custom-tags/in_manifest.txt") {
+		t.Errorf("Custom tag file 'custom-tags/in_manifest.txt' is not in the bag")
+	}
+	if !sliceContains(files, "custom-tags/not_in_manifest.txt") {
+		t.Errorf("Custom tag file 'custom-tags/not_in_manifest.txt' is not in the bag")
+	}
+
+	// First file should be in the tag manifests. Second file should not.
+	tagManifests := rBag.GetManifests(bagins.TagManifest)
+	for _, tagManifest := range tagManifests {
+		if _, exists := tagManifest.Data["custom-tags/in_manifest.txt"]; exists == false {
+			t.Errorf("File 'custom-tags/in_manifest.txt' is missing from tagmanifest-%s.txt",
+				tagManifest.Algorithm())
+		}
+		if _, exists := tagManifest.Data["custom-tags/not_in_manifest.txt"]; exists == true {
+			t.Errorf("File 'custom-tags/not_in_manifest.txt' is should not have an entry in "+
+				"tagmanifest-%s.txt, but it does", tagManifest.Algorithm())
+		}
 	}
 }
 
