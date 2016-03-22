@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 0.9.1
+
+* Fixed a bug which caused some file paths in manifests to be absolute instead of relative.
+
 ## 0.9.0
 
 * Added support for custom tag files.
