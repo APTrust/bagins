@@ -364,19 +364,20 @@ func TestReadTagFileBag(t *testing.T) {
 	}
 
 	// Check that tag files exist on disk
-	aptrustInfoFile := filepath.Join(bagPath, "aptrust-info.txt")
-	bagInfoFile := filepath.Join(bagPath, "bag-info.txt")
-	bagItFile := filepath.Join(bagPath, "bagit.txt")
-	laserTagFile := filepath.Join(bagPath, "laser-tag.txt")
-	playerStatsFile := filepath.Join(bagPath, "custom-tags", "player-stats.txt")
-	tvScheduleFile := filepath.Join(bagPath, "custom-tags", "tv-schedule.txt")
-	manifestMd5 := filepath.Join(bagPath, "manifest-md5.txt")
-	manifestSha256 := filepath.Join(bagPath, "manifest-sha256.txt")
+	aptrustInfoFile := "aptrust-info.txt"
+	bagInfoFile := "bag-info.txt"
+	bagItFile := "bagit.txt"
+	laserTagFile := "laser-tag.txt"
+	playerStatsFile := filepath.Join("custom-tags", "player-stats.txt")
+	tvScheduleFile := filepath.Join("custom-tags", "tv-schedule.txt")
+	manifestMd5 := "manifest-md5.txt"
+	manifestSha256 := "manifest-sha256.txt"
 
 	tagFiles := []string { aptrustInfoFile, bagInfoFile, bagItFile,
 		laserTagFile, playerStatsFile, tvScheduleFile }
 	for _, tf := range tagFiles {
-		_, err = os.Stat(tf)
+		absPath := filepath.Join(bagPath, tf)
+		_, err = os.Stat(absPath)
 		if  err != nil && os.IsNotExist(err) {
 			t.Errorf("Tag file is not written to disk at %s", tf)
 		}
@@ -454,6 +455,7 @@ func TestReadTagFileBag(t *testing.T) {
 		if len(tagManifests[0].Data) != 8 {
 			t.Errorf("Tag manifest should have 8 entries, found %d", len(tagManifests[0].Data))
 		}
+
 
 		// Check the fixity values
 		md5Entries := make(map[string]string, 6)

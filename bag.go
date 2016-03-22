@@ -569,7 +569,8 @@ func (b *Bag) calculateChecksumsForManagedTagFiles() (errs []error) {
 				}
 				return errors
 			}
-			manifest.Data[tf.Name()] = checksum
+			relativeFilePath := strings.Replace(tf.Name(), b.pathToFile + "/", "", 1)
+			manifest.Data[relativeFilePath] = checksum
 		}
 	}
 	return errs
@@ -587,7 +588,8 @@ func (b *Bag) calculateChecksumsForCustomTagFiles() (errs []error) {
 		nonPayloadFiles = append(nonPayloadFiles, m.Name())
 	}
 	for _, file := range nonPayloadFiles {
-		if _, exclude := b.excludeFromTagManifests[file]; exclude {
+		relativeFilePath := strings.Replace(file, b.pathToFile + "/", "", 1)
+		if _, exclude := b.excludeFromTagManifests[relativeFilePath]; exclude {
 			continue
 		}
 		// Use relative path in manifest, abs path when calculating checksum.
@@ -605,7 +607,7 @@ func (b *Bag) calculateChecksumsForCustomTagFiles() (errs []error) {
 				}
 				return errors
 			}
-			manifest.Data[file] = checksum
+			manifest.Data[relativeFilePath] = checksum
 		}
 	}
 	return errs
