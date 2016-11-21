@@ -1,7 +1,7 @@
 package bagins_test
 
 import (
-//	"fmt"
+	//	"fmt"
 	"github.com/APTrust/bagins"
 	"io/ioutil"
 	"os"
@@ -373,12 +373,12 @@ func TestReadTagFileBag(t *testing.T) {
 	manifestMd5 := "manifest-md5.txt"
 	manifestSha256 := "manifest-sha256.txt"
 
-	tagFiles := []string { aptrustInfoFile, bagInfoFile, bagItFile,
-		laserTagFile, playerStatsFile, tvScheduleFile }
+	tagFiles := []string{aptrustInfoFile, bagInfoFile, bagItFile,
+		laserTagFile, playerStatsFile, tvScheduleFile}
 	for _, tf := range tagFiles {
 		absPath := filepath.Join(bagPath, tf)
 		_, err = os.Stat(absPath)
-		if  err != nil && os.IsNotExist(err) {
+		if err != nil && os.IsNotExist(err) {
 			t.Errorf("Tag file is not written to disk at %s", tf)
 		}
 	}
@@ -388,7 +388,7 @@ func TestReadTagFileBag(t *testing.T) {
 	if err != nil {
 		t.Errorf("ListFiles() returned error %v", err)
 	}
-	expectedFiles := []string {
+	expectedFiles := []string{
 		"aptrust-info.txt",
 		"bag-info.txt",
 		"bagit.txt",
@@ -408,7 +408,7 @@ func TestReadTagFileBag(t *testing.T) {
 	}
 
 	// Make sure the bag knows about the parsed tag files
-	expectedParsedFiles := []string {"bagit.txt", "bag-info.txt", "aptrust-info.txt" }
+	expectedParsedFiles := []string{"bagit.txt", "bag-info.txt", "aptrust-info.txt"}
 	parsedTagFiles := rBag.ListTagFiles()
 	if len(parsedTagFiles) != len(expectedParsedFiles) {
 		t.Errorf("Expected %d parsed tag files, got %d",
@@ -422,7 +422,7 @@ func TestReadTagFileBag(t *testing.T) {
 	}
 
 	// Make sure the bag knows about unparsed tag files
-	expectedUnparsed := []string {
+	expectedUnparsed := []string{
 		"custom-tags/player-stats.txt",
 		"custom-tags/tv-schedule.txt",
 		"laser-tag.txt"}
@@ -430,7 +430,6 @@ func TestReadTagFileBag(t *testing.T) {
 	if err != nil {
 		t.Errorf("UnparsedTagFiles() returned unexpected error: %v", err)
 	}
-
 
 	if len(unparsedTagFiles) != len(expectedUnparsed) {
 		t.Errorf("Expected %d parsed tag files, got %d",
@@ -455,7 +454,6 @@ func TestReadTagFileBag(t *testing.T) {
 		if len(tagManifests[0].Data) != 8 {
 			t.Errorf("Tag manifest should have 8 entries, found %d", len(tagManifests[0].Data))
 		}
-
 
 		// Check the fixity values
 		md5Entries := make(map[string]string, 6)
@@ -513,7 +511,6 @@ func TestReadTagFileBag(t *testing.T) {
 		}
 	}
 }
-
 
 // It should place an appropriate file in the data directory and add the fixity to the manifest.
 func TestAddFile(t *testing.T) {
@@ -645,7 +642,11 @@ func TestAddDir(t *testing.T) {
 	defer os.RemoveAll(srcDir)
 
 	// Setup the test bag
-	bag, _ := setupTestBag("_GOTEST_BAG_ADDDIR_")
+	bag, err := setupTestBag("_GOTEST_BAG_ADDDIR_")
+	if err != nil {
+		t.Error(err.Error())
+		return
+	}
 	defer os.RemoveAll(bag.Path())
 
 	// It should produce no errors

@@ -15,7 +15,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 )
 
 // Payloads describes a filepath location to serve as the data directory of
@@ -89,7 +88,6 @@ func (p *Payload) Add(srcPath string, dstPath string, manifests []*Manifest) (ma
 		hashFunctions = append(hashFunctions, hashObj)
 		hashFunctionNames = append(hashFunctionNames, m.Algorithm())
 	}
-
 
 	// If src and dst are the same, copying with destroy the src.
 	// Just compute the hash.
@@ -167,25 +165,15 @@ func (p *Payload) AddAll(src string, manifests []*Manifest) (checksums map[strin
 	if err := filepath.Walk(src, visit); err != nil {
 		errs = append(errs, err)
 	}
-	// Perform Payload.Add on each file found in src under a goroutine.
-	queue := make(chan bool, 5)
-	wg := sync.WaitGroup{}
-	for index := range files {
-		queue <- true
-		wg.Add(1)
-		go func(file string, src string, manifests []*Manifest) {
-			dstPath := strings.TrimPrefix(file, src)
-			fixities, err := p.Add(file, dstPath, manifests)
-			if err != nil {
-				errs = append(errs, err)
-			}
-			checksums[dstPath] = fixities
-			<-queue
-			wg.Done()
-		}(files[index], src, manifests)
-	}
 
-	wg.Wait()
+	for _, file := range files {
+		dstPath := strings.TrimPrefix(file, src)
+		fixities, err := p.Add(file, dstPath, manifests)
+		if err != nil {
+			errs = append(errs, err)
+		}
+		checksums[dstPath] = fixities
+	}
 
 	return
 }
